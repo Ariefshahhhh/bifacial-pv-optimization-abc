@@ -1,88 +1,120 @@
 import streamlit as st
 
-st.set_page_config(page_title="PV Performance Calculator", layout="wide")
-
-st.title("⚡ PV Performance Calculator (Manual)")
-st.markdown("Based on standard PV performance equations")
-
+st.title("⚡ Bifacial PV Output Computation Tool")
+st.markdown(
+    "Compute **Pout, Vmp, Imp, Voc, and Isc** using manual equations with "
+    "temperature coefficients and loss factors."
+)
 st.markdown("---")
 
-# ===============================
-# INPUT SECTION
-# ===============================
-
+# =========================
+# INPUT LAYOUT
+# =========================
 col1, col2 = st.columns(2)
 
+# ---------- LEFT COLUMN ----------
 with col1:
-    st.subheader("STC Electrical Parameters")
+    st.subheader("🔆 Environmental Inputs")
 
-    Pstc = st.number_input("Pmax,STC (W)", value=470.0, format="%.3f")
-    Vmp_stc = st.number_input("Vmp,STC (V)", value=38.0, format="%.3f")
-    Imp_stc = st.number_input("Imp,STC (A)", value=12.23, format="%.3f")
-    Voc_stc = st.number_input("Voc,STC (V)", value=46.8, format="%.3f")
-    Isc_stc = st.number_input("Isc,STC (A)", value=12.89, format="%.3f")
+    G_front = st.number_input("Front Irradiance (W/m²)", value=800.0)
+    G_rear = st.number_input("Rear Irradiance (W/m²)", value=100.0)
+    Tcell = st.number_input("Cell Temperature (°C)", value=30.0)
 
+    st.subheader("📦 Module STC Electrical Data")
+
+    Pmax_stc = st.number_input("Pmax at STC (W)", value=450.0)
+    Vmp_stc = st.number_input("Vmp at STC (V)", value=41.0, step=0.1)
+    Imp_stc = st.number_input("Imp at STC (A)", value=10.98, step=0.01)
+    Voc_stc = st.number_input("Voc at STC (V)", value=49.5, step=0.1)
+    Isc_stc = st.number_input("Isc at STC (A)", value=11.50, step=0.01)
+
+# ---------- RIGHT COLUMN ----------
 with col2:
-    st.subheader("Operating Conditions")
+    st.subheader("🌡 Temperature Coefficients")
 
-    Tc = st.number_input("Cell Temperature Tc (°C)", value=65.0, format="%.3f")
-    fg = st.number_input("Irradiance factor fg", value=0.95, format="%.3f")
-    fmm = st.number_input("Mismatch factor fmm", value=0.97, format="%.3f")
-    fage = st.number_input("Aging factor fage", value=0.94, format="%.3f")
-    fclean = st.number_input("Cleaning factor fclean", value=0.97, format="%.3f")
-    funshade = st.number_input("Unshaded factor funshade", value=1.00, format="%.3f")
+    alpha = st.number_input(
+        "α (Isc Temperature Coefficient, 1/°C)",
+        value=0.040,
+        format="%.3f"
+    )
+    beta = st.number_input(
+        "β (Voltage Temperature Coefficient, 1/°C)",
+        value=-0.280,
+        format="%.3f"
+    )
+    gamma = st.number_input(
+        "γ (Power Temperature Coefficient, 1/°C)",
+        value=-0.350,
+        format="%.3f"
+    )
 
-st.markdown("---")
+    st.subheader("⚙ Loss / Correction Factors")
 
-st.subheader("Temperature Coefficients (from datasheet)")
+    Fmm = st.number_input("Mismatch Factor (Fmm)", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
+    Fage = st.number_input("Aging Factor (Fage)", value=0.95, min_value=0.80, max_value=1.00, step=0.01)
+    Fg = st.number_input("Glass / Soiling Factor (Fg)", value=0.97, min_value=0.80, max_value=1.00, step=0.01)
+    Fclean = st.number_input("Cleaning Factor (Fclean)", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
+    Fshade = st.number_input("Shading Factor (Fshade)", value=1.00, min_value=0.80, max_value=1.00, step=0.01)
 
-col3, col4, col5 = st.columns(3)
-
-with col3:
-    alpha = st.number_input("α (Current coeff, %/°C)", value=0.048, format="%.3f")
-
-with col4:
-    beta = st.number_input("β (Voltage coeff, %/°C)", value=-0.283, format="%.3f")
-
-with col5:
-    gamma = st.number_input("γ (Power coeff, %/°C)", value=-0.360, format="%.3f")
-
-# ===============================
+# =========================
 # CALCULATION
-# ===============================
-
-if st.button("Calculate PV Performance"):
-
-    # Temperature factors
-    ftemp_p = 1 + (gamma / 100) * (Tc - 25)
-    ftemp_i = 1 + (alpha / 100) * (Tc - 25)
-    ftemp_v = 1 + (beta / 100) * (Tc - 25)
-
-    # Power
-    P = Pstc * fg * ftemp_p * fmm * fage * fclean * funshade
-
-    # Current
-    Imp = Imp_stc * ftemp_i * fg * fclean * funshade
-    Isc = Isc_stc * ftemp_i * fg * fclean * funshade
-
-    # Voltage
-    Vmp = Vmp_stc * ftemp_v
-    Voc = Voc_stc * ftemp_v
-
+# =========================
+if st.button("Calculate Outputs"):
     st.markdown("---")
-    st.subheader("Calculated Results")
 
-    c1, c2, c3, c4, c5 = st.columns(5)
+    # Total irradiance
+    G_total = G_front + G_rear
 
-    c1.metric("Pmax (W)", f"{P:.2f}")
-    c2.metric("Vmp (V)", f"{Vmp:.2f}")
-    c3.metric("Imp (A)", f"{Imp:.2f}")
-    c4.metric("Voc (V)", f"{Voc:.2f}")
-    c5.metric("Isc (A)", f"{Isc:.2f}")
+    # ---- Temperature correction factors ----
+    f_temp_I = 1 + alpha * (Tcell - 25)
+    f_temp_V = 1 + beta * (Tcell - 25)
+    f_temp_P = 1 + gamma * (Tcell - 25)
 
-    # Save for ABC page
-    st.session_state["P_calc"] = P
-    st.session_state["Vmp_calc"] = Vmp
-    st.session_state["Imp_calc"] = Imp
-    st.session_state["Voc_calc"] = Voc
-    st.session_state["Isc_calc"] = Isc
+    # ---- Electrical outputs ----
+    Isc_T = Isc_stc * f_temp_I
+    Voc_T = Voc_stc * f_temp_V
+    Vmp_T = Vmp_stc * f_temp_V
+    Pmax_T = Pmax_stc * f_temp_P
+
+    # ---- Output power ----
+    Pout = (
+        Pmax_T *
+        (G_total / 1000) *
+        Fmm *
+        Fage *
+        Fg *
+        Fclean *
+        Fshade
+    )
+
+    # ---- Current at maximum power ----
+    Imp_T = Pout / Vmp_T if Vmp_T != 0 else 0
+
+    # =========================
+    # DISPLAY RESULTS
+    # =========================
+    st.subheader("📊 Calculated Electrical Outputs")
+
+    colA, colB = st.columns(2)
+
+    with colA:
+        st.success(f"**Pout** = {Pout:.2f} W")
+        st.success(f"**Vmp** = {Vmp_T:.2f} V")
+        st.success(f"**Voc** = {Voc_T:.2f} V")
+
+    with colB:
+        st.success(f"**Imp** = {Imp_T:.2f} A")
+        st.success(f"**Isc** = {Isc_T:.2f} A")
+
+    # =========================
+    # SAVE FOR ABC PAGE
+    # =========================
+    st.session_state["P_calculated"] = Pout
+    st.session_state["Vmp_T"] = Vmp_T
+    st.session_state["Imp_T"] = Imp_T
+    st.session_state["Voc_T"] = Voc_T
+    st.session_state["Isc_T"] = Isc_T
+    st.session_state["gamma"] = gamma
+    st.session_state["G_total"] = G_total
+
+    st.info("Values saved. Proceed to the ABC Optimization page.")
