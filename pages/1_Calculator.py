@@ -22,11 +22,11 @@ with col2:
     beta_voc = st.number_input("β Voc Temp Coefficient (%/°C)", value=-0.29)
     alpha_isc = st.number_input("α Isc Temp Coefficient (%/°C)", value=0.05)
 
-    Fmm = st.number_input("Mismatch Factor Fmm", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
-    Fage = st.number_input("Aging Factor Fage", value=0.95, min_value=0.80, max_value=1.00, step=0.01)
-    Fg = st.number_input("Glass/Soiling Factor Fg", value=0.97, min_value=0.80, max_value=1.00, step=0.01)
-    Fclean = st.number_input("Cleaning Factor Fclean", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
-    Fshade = st.number_input("Shading Factor Fshade", value=0.95, min_value=0.80, max_value=1.00, step=0.01)
+    Fmm = st.number_input("Mismatch Factor (Fmm)", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
+    Fage = st.number_input("Aging Factor (Fage)", value=0.95, min_value=0.80, max_value=1.00, step=0.01)
+    Fg = st.number_input("Glass/Soiling Factor (Fg)", value=0.97, min_value=0.80, max_value=1.00, step=0.01)
+    Fclean = st.number_input("Cleaning Factor (Fclean)", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
+    Fshade = st.number_input("Shading Factor (Fshade)", value=0.95, min_value=0.80, max_value=1.00, step=0.01)
 
 # ------------------------------------------------
 # CALCULATIONS
@@ -77,3 +77,4 @@ if st.button("Calculate All Parameters"):
     st.session_state["Pmax_stc"] = Pmax_stc
 
     st.success("All parameters calculated successfully! Continue to ABC Optimization page.")
+
