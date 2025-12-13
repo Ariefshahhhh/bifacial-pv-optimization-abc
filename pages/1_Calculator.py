@@ -1,46 +1,77 @@
 import streamlit as st
 
-st.title("⚡ PV Output Power Computation Tool")
-st.markdown("Calculate bifacial PV power output with complete correction factors.")
+st.title("⚡ Bifacial PV Output Estimation")
+st.markdown("Estimate key electrical output parameters of a bifacial PV module.")
 st.markdown("---")
+
+# =========================
+# INPUT SECTION
+# =========================
+st.subheader("📥 Module & Environmental Inputs")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    Pmax_stc = st.number_input("Module Pmax at STC (W)", value=450.0)
-    irr_front = st.number_input("Front Irradiance (W/m²)", value=800.0)
-    irr_rear = st.number_input("Rear Irradiance (W/m²)", value=100.0)
-    temp_coeff = st.number_input("Temperature Coefficient γ (per °C)", value=0.004)
-    Tcell = st.number_input("Cell Temperature (°C)", value=30.0)
+    Pstc = st.number_input("Pmp at STC (W)", value=450.0)
+    Voc_stc = st.number_input("Voc at STC (V)", value=49.5)
+    Isc_stc = st.number_input("Isc at STC (A)", value=11.4)
+    Vmp_stc = st.number_input("Vmp at STC (V)", value=41.5)
+    Imp_stc = st.number_input("Imp at STC (A)", value=10.8)
 
 with col2:
-    Fmm = st.number_input("Mismatch Factor (Fmm)", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
-    Fdegrad = st.number_input("Degradation Factor (Fdegrad)", value=0.99, min_value=0.80, max_value=1.00, step=0.01)
-    Fg = st.number_input("Glass/Soiling Factor (Fg)", value=0.97, min_value=0.80, max_value=1.00, step=0.01)
-    Fclean = st.number_input("Cleaning Factor (Fclean)", value=0.98, min_value=0.80, max_value=1.00, step=0.01)
-    Funshade = st.number_input("Unshaded Factor (Funshade)", value=0.95, min_value=0.80, max_value=1.00, step=0.01)
+    G_front = st.number_input("Front Irradiance (W/m²)", value=800.0)
+    G_rear = st.number_input("Rear Irradiance (W/m²)", value=100.0)
+    Tcell = st.number_input("Cell Temperature (°C)", value=30.0)
+    alpha_I = st.number_input("Current Temp Coeff α (%/°C)", value=0.05) / 100
+    beta_V = st.number_input("Voltage Temp Coeff β (%/°C)", value=0.30) / 100
 
-irr_total = irr_front + irr_rear
-temp_factor = 1 - temp_coeff * (Tcell - 25)
+# =========================
+# LOSS FACTORS
+# =========================
+st.subheader("⚙️ Correction Factors")
 
-Pout = (
-    Pmax_stc *
-    (irr_total / 1000) *
-    temp_factor *
-    Fmm *
-    Fdegrad *
-    Fg *
-    Fclean *
-    Funshade
-)
+c1, c2, c3 = st.columns(3)
 
+with c1:
+    Fmm = st.number_input("Mismatch Factor (Fmm)", 0.80, 1.00, 0.98, 0.01)
+    Fage = st.number_input("Aging Factor (Fage)", 0.80, 1.00, 0.95, 0.01)
+
+with c2:
+    Fclean = st.number_input("Cleaning Factor (Fclean)", 0.80, 1.00, 0.97, 0.01)
+    Fshade = st.number_input("Shading Factor (Fshade)", 0.80, 1.00, 0.96, 0.01)
+
+with c3:
+    Fg = st.number_input("Glass/Soiling Factor (Fg)", 0.80, 1.00, 0.98, 0.01)
+
+# =========================
+# CALCULATION
+# =========================
+G_total = G_front + G_rear
+temp_diff = Tcell - 25
+loss_product = Fmm * Fage * Fclean * Fshade * Fg
+
+Isc = Isc_stc * (G_total / 1000) * (1 + alpha_I * temp_diff)
+Voc = Voc_stc * (1 - beta_V * temp_diff)
+
+Imp = Imp_stc * (G_total / 1000) * (1 + alpha_I * temp_diff) * loss_product
+Vmp = Vmp_stc * (1 - beta_V * temp_diff)
+Pmp = Vmp * Imp
+
+# =========================
+# OUTPUT
+# =========================
 st.markdown("---")
-if st.button("Calculate Output Power"):
-    st.success(f"Calculated Output Power = **{Pout:.2f} W**")
+st.subheader("📊 Estimated PV Output Parameters")
 
-    # Save values for optimization page
-    st.session_state["P_calculated"] = Pout
-    st.session_state["irr_total"] = irr_total
-    st.session_state["temp_factor"] = temp_factor
-    st.session_state["Pmax_stc"] = Pmax_stc
+o1, o2, o3, o4, o5 = st.columns(5)
 
+o1.metric("Voc (V)", f"{Voc:.2f}")
+o2.metric("Isc (A)", f"{Isc:.2f}")
+o3.metric("Vmp (V)", f"{Vmp:.2f}")
+o4.metric("Imp (A)", f"{Imp:.2f}")
+o5.metric("Pmp (W)", f"{Pmp:.2f}")
+
+# Save for ABC / Results pages
+st.session_state["Vmp"] = Vmp
+st.session_state["Imp"] = Imp
+st.session_state["Pmp"] = Pmp
