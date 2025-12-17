@@ -68,7 +68,41 @@ if st.button("Calculate Module Outputs"):
         st.success(f"**Short Circuit Current (Isc)** = {Isc:.2f} A")
 
     # ================= STEP DISPLAY =================
-    st.markdown("### 🧮 Calculation Steps")
-    st.write(f"1. Rear irradiance = BG × G_front = {BG} × {G_front} = {G_rear:.2f} W/m²")
-    st.write(f"2. Total irradiance = {G_total:.2f} W/m² → FG = {FG:.3f}")
-    st.write(f"3. Ftemp,I = {Ftemp_I:.3f}, Ftemp,V = {Ftemp_V:.3f}, Ftemp,P = {Ftemp_P:.3f}")
+st.markdown("### 🧮 Calculation Steps")
+
+st.write(
+    f"1️⃣ **Short-Circuit Current (Isc)**\n\n"
+    f"Isc = Isc_STC × Ftemp,I × Fg × Fclean × Funshade\n\n"
+    f"Isc = {Isc_stc:.3f} × {Ftemp_I:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} "
+    f"= **{Isc_T:.3f} A**"
+)
+
+st.write(
+    f"2️⃣ **Open-Circuit Voltage (Voc)**\n\n"
+    f"Voc = Voc_STC × Ftemp,V\n\n"
+    f"Voc = {Voc_stc:.3f} × {Ftemp_V:.3f} "
+    f"= **{Voc_T:.3f} V**"
+)
+
+st.write(
+    f"3️⃣ **Voltage at Maximum Power (Vmp)**\n\n"
+    f"Vmp = Vmp_STC × Ftemp,V\n\n"
+    f"Vmp = {Vmp_stc:.3f} × {Ftemp_V:.3f} "
+    f"= **{Vmp_T:.3f} V**"
+)
+
+st.write(
+    f"4️⃣ **Current at Maximum Power (Imp)**\n\n"
+    f"Imp = Imp_STC × Ftemp,I × Fg × Fclean × Funshade\n\n"
+    f"Imp = {Imp_stc:.3f} × {Ftemp_I:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} "
+    f"= **{Imp_T:.3f} A**"
+)
+
+st.write(
+    f"5️⃣ **Maximum Output Power (Pmax)**\n\n"
+    f"Pmax = Pmax_STC × Ftemp,P × Fg × Fclean × Funshade × Fmm × Fage\n\n"
+    f"Pmax = {Pmax_stc:.2f} × {Ftemp_P:.3f} × {Fg:.3f} × {Fclean:.3f} × "
+    f"{Fshade:.3f} × {Fmm:.3f} × {Fage:.3f} "
+    f"= **{Pout:.2f} W**"
+)
+
