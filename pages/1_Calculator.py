@@ -68,7 +68,7 @@ if st.button("Calculate Outputs"):
     # Electrical outputs
     Isc = Isc_stc * Ftemp_I * Fg * Fclean * Fshade
     Voc = Voc_stc * Ftemp_V
-    Vmp = Vmp_stc * (1 + (beta_vmp_eff / 100) * (Tcell - 25))
+    Vmp = Vmp_stc * Ftemp_V
     Imp = Imp_stc * Ftemp_I * Fg * Fclean * Fshade
     Pmax = Pmax_stc * Ftemp_P * Fg * Fclean * Fshade * Fmm * Fage
 
@@ -126,6 +126,7 @@ if st.button("Calculate Outputs"):
     )
 
     st.info("All calculations follow the datasheet-based PV computation formula at module level.")
+
 
 
 
