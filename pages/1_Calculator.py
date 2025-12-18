@@ -111,32 +111,44 @@ if st.button("Calculate Outputs"):
 
     st.write(f"3️⃣ Irradiance factor Fg = G_front / 1000 = {G_front} / 1000 = **{Fg:.3f}**")
 
+
+    
     st.write(
         f"4️⃣ Temperature factors:\n"
-        f"- Ftemp,I = 1 + (α/100)(T−25) = **{Ftemp_I:.3f}**\n"
-        f"- Ftemp,V = 1 + (β/100)(T−25) = **{Ftemp_V:.3f}**\n"
-        f"- Ftemp,P = 1 + (γ/100)(T−25) = **{Ftemp_P:.3f}**"
+        f"- Ftemp,Isc = 1 + (α_Isc/100)(T−25) = **{Ftemp_Isc:.3f}**\n"
+        f"- Ftemp,Imp = 1 + (α_Imp/100)(T−25) = **{Ftemp_Imp:.3f}**\n"
+        f"- Ftemp,Voc = 1 + (β_Voc/100)(T−25) = **{Ftemp_Voc:.3f}**\n"
+        f"- Ftemp,Vmp = 1 + (β_Vmp/100)(T−25) = **{Ftemp_Vmp:.3f}**\n"
+        f"- Ftemp,Pmp = 1 + (γ/100)(T−25) = **{Ftemp_Pmp:.3f}**"
     )
 
-    st.write(f"5️⃣ Cleaning factor Fclean = (100 − dirt)/100 = (100 − {dirt})/100 = **{Fclean:.3f}**")
-
+    st.write(
+        f"5️⃣ Cleaning factor Fclean = (100 − dirt)/100 = "
+        f"(100 − {dirt})/100 = **{Fclean:.3f}**"
+    )
+    
     st.write(
         f"6️⃣ Aging factor Fage:\n"
         f"- Year 1 degradation = 1.5%\n"
         f"- Subsequent years = 0.5%/year\n"
         f"- Total Fage = **{Fage:.3f}**"
     )
-
+    
     st.write(
         f"7️⃣ Electrical calculations:\n"
-        f"- Isc = {Isc_stc:.3f} × {Ftemp_I:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} = **{Isc:.2f} A**\n"
-        f"- Voc = {Voc_stc:.3f} × {Ftemp_V:.3f} = **{Voc:.2f} V**\n"
-        f"- Vmp = {Vmp_stc:.3f} × {Ftemp_V:.3f} = **{Vmp:.2f} V**\n"
-        f"- Imp = {Imp_stc:.3f} × {Ftemp_I:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} = **{Imp:.2f} A**\n"
-        f"- Pmax = {Pmax_stc:.1f} × {Ftemp_P:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} × {Fmm:.3f} × {Fage:.3f} = **{Pmax:.2f} W**"
+        f"- Isc = {Isc_stc:.3f} × {Ftemp_Isc:.3f} × {Fg:.3f} × "
+        f"{Fclean:.3f} × {Fshade:.3f} = **{Isc:.2f} A**\n"
+        f"- Voc = {Voc_stc:.3f} × {Ftemp_Voc:.3f} = **{Voc:.2f} V**\n"
+        f"- Vmp = {Vmp_stc:.3f} × {Ftemp_Vmp:.3f} = **{Vmp:.2f} V**\n"
+        f"- Imp = {Imp_stc:.3f} × {Ftemp_Imp:.3f} × {Fg:.3f} × "
+        f"{Fclean:.3f} × {Fshade:.3f} = **{Imp:.2f} A**\n"
+        f"- Pmax = {Pmax_stc:.1f} × {Ftemp_Pmp:.3f} × {Fg:.3f} × "
+        f"{Fclean:.3f} × {Fshade:.3f} × {Fmm:.3f} × {Fage:.3f} "
+        f"= **{Pmax:.2f} W**"
     )
-
+    
     st.info("All calculations follow the datasheet-based PV computation formula at module level.")
+
 
 
 
