@@ -87,7 +87,7 @@ if st.button("Calculate Outputs"):
     # --- SAVE FOR ABC (THIS IS THE KEY PART) ---
     st.session_state["Pmax_calculated"] = Pmax
     st.session_state["Pmax_STC"] = Pmax_stc
-    st.session_state["Ftemp_P"] = Ftemp_P
+    st.session_state["Ftemp_P"] = Ftemp_Pmp
     st.session_state["Fg"] = Fg
     st.session_state["Fclean"] = Fclean
     st.session_state["Fshade"] = Fshade
@@ -137,6 +137,7 @@ if st.button("Calculate Outputs"):
     )
 
     st.info("All calculations follow the datasheet-based PV computation formula at module level.")
+
 
 
 
