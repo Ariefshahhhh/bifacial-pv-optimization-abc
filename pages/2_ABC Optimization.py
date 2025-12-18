@@ -2,145 +2,153 @@ import streamlit as st
 import numpy as np
 
 st.title("🐝 Artificial Bee Colony (ABC) Optimization")
-st.markdown(
-    "This module optimizes selected loss factors to minimize the error between "
-    "**calculated electrical outputs** and **measured module data**."
-)
+st.markdown("Optimize correction factors to minimize error between calculated and measured **Pmax**.")
 st.markdown("---")
 
-# ------------------ SAFETY CHECK ------------------
+# ===============================
+# 1️⃣ CHECK REQUIRED VALUES
+# ===============================
 required_keys = [
-    "Pmax_calc", "Isc_calc", "Voc_calc", "Vmp_calc", "Imp_calc",
-    "Pmax_STC", "Isc_STC", "Voc_STC", "Vmp_STC", "Imp_STC",
-    "Ftemp_I", "Ftemp_V", "Ftemp_P", "Fg", "Fage"
+    "Pmax_calculated",
+    "Pmax_stc",
+    "Ftemp_P",
+    "Fg",
+    "Fclean",
+    "Fshade",
+    "Fmm",
+    "Fage"
 ]
 
-if not all(k in st.session_state for k in required_keys):
+missing = [k for k in required_keys if k not in st.session_state]
+
+if missing:
     st.error("❌ Please complete the **Calculator page** first.")
     st.stop()
 
-# ------------------ LOAD DATA ------------------
-Pmax_calc = st.session_state["Pmax_calc"]
-Isc_calc = st.session_state["Isc_calc"]
-Voc_calc = st.session_state["Voc_calc"]
-Vmp_calc = st.session_state["Vmp_calc"]
-Imp_calc = st.session_state["Imp_calc"]
-
-Pmax_STC = st.session_state["Pmax_STC"]
-Isc_STC = st.session_state["Isc_STC"]
-Voc_STC = st.session_state["Voc_STC"]
-Vmp_STC = st.session_state["Vmp_STC"]
-Imp_STC = st.session_state["Imp_STC"]
-
-Ftemp_I = st.session_state["Ftemp_I"]
-Ftemp_V = st.session_state["Ftemp_V"]
+# ===============================
+# 2️⃣ READ VALUES FROM CALCULATOR
+# ===============================
+Pcalc = st.session_state["Pmax_calculated"]
+Pmax_stc = st.session_state["Pmax_stc"]
 Ftemp_P = st.session_state["Ftemp_P"]
 Fg = st.session_state["Fg"]
+Fclean = st.session_state["Fclean"]
+Fshade = st.session_state["Fshade"]
+Fmm = st.session_state["Fmm"]
 Fage = st.session_state["Fage"]
 
-# ------------------ MEASURED INPUT ------------------
-st.subheader("📥 Measured Module Data")
-col1, col2 = st.columns(2)
+# ===============================
+# 3️⃣ MEASURED INPUT
+# ===============================
+st.subheader("📏 Measured Data Input")
+P_measured = st.number_input(
+    "Measured Maximum Power, Pmax_measured (W)",
+    value=Pcalc,
+    step=1.0
+)
 
-with col1:
-    Pmax_meas = st.number_input("Measured Pmax (W)", value=Pmax_calc)
-    Voc_meas = st.number_input("Measured Voc (V)", value=Voc_calc)
+# ===============================
+# 4️⃣ ABC PARAMETERS
+# ===============================
+st.subheader("🐝 ABC Parameters")
+iterations = st.slider("Number of Iterations", 50, 500, 200)
+colony_size = st.slider("Number of Bees", 10, 100, 30)
 
-with col2:
-    Isc_meas = st.number_input("Measured Isc (A)", value=Isc_calc)
-    Vmp_meas = st.number_input("Measured Vmp (V)", value=Vmp_calc)
-
-# ------------------ ABC PARAMETERS ------------------
-st.markdown("---")
-st.subheader("⚙ ABC Parameters")
-
-iters = st.slider("Iterations", 50, 300, 150, step=10)
-bees = st.slider("Number of Bees", 10, 50, 25, step=5)
-
-# ------------------ ABC FUNCTIONS ------------------
-def calculate_outputs(Fclean, Fshade, Fmm):
-    Isc = Isc_STC * Ftemp_I * Fg * Fclean * Fshade
-    Voc = Voc_STC * Ftemp_V
-    Vmp = Vmp_STC * Ftemp_V
-    Imp = Imp_STC * Ftemp_I * Fg * Fclean * Fshade
-    Pmax = Pmax_STC * Ftemp_P * Fg * Fclean * Fshade * Fmm * Fage
-    return Pmax, Isc, Voc, Vmp, Imp
-
-def error_function(sol):
-    Fclean, Fshade, Fmm = sol
-    Pmax, Isc, Voc, Vmp, _ = calculate_outputs(Fclean, Fshade, Fmm)
-
+# ===============================
+# 5️⃣ ABC FUNCTIONS
+# ===============================
+def calculate_pmax(factors):
+    Fmm_i, Fclean_i, Fshade_i = factors
     return (
-        abs(Pmax - Pmax_meas) +
-        abs(Isc - Isc_meas) +
-        abs(Voc - Voc_meas) +
-        abs(Vmp - Vmp_meas)
+        Pmax_stc
+        * Ftemp_P
+        * Fg
+        * Fclean_i
+        * Fshade_i
+        * Fmm_i
+        * Fage
     )
 
-def run_abc():
-    colony = np.random.uniform(0.85, 1.0, (bees, 3))
-    best = None
-    best_err = float("inf")
+def objective_function(factors):
+    return abs(calculate_pmax(factors) - P_measured)
 
+def abc_optimize():
+    solutions = np.random.uniform(0.8, 1.0, (colony_size, 3))
+    best_solution = None
+    best_error = float("inf")
     history = []
 
-    for _ in range(iters):
-        for i in range(bees):
-            err = error_function(colony[i])
-            if err < best_err:
-                best_err = err
-                best = colony[i].copy()
+    for _ in range(iterations):
+        for i in range(colony_size):
+            error = objective_function(solutions[i])
+            if error < best_error:
+                best_error = error
+                best_solution = solutions[i].copy()
 
-            colony[i] += np.random.uniform(-0.01, 0.01, 3)
-            colony[i] = np.clip(colony[i], 0.85, 1.0)
+            solutions[i] += np.random.uniform(-0.01, 0.01, 3)
+            solutions[i] = np.clip(solutions[i], 0.8, 1.0)
 
-        history.append(best_err)
+        history.append(best_error)
 
-    return best, best_err, history
+    return best_solution, best_error, history
 
-# ------------------ RUN ABC ------------------
+# ===============================
+# 6️⃣ RUN ABC
+# ===============================
 if st.button("🚀 Run ABC Optimization"):
-    best_sol, best_err, history = run_abc()
-    Fclean_opt, Fshade_opt, Fmm_opt = best_sol
 
-    Pmax_opt, Isc_opt, Voc_opt, Vmp_opt, Imp_opt = calculate_outputs(
-        Fclean_opt, Fshade_opt, Fmm_opt
-    )
+    best_factors, best_error, history = abc_optimize()
+    Fmm_opt, Fclean_opt, Fshade_opt = best_factors
 
-    # Save optimized values
-    st.session_state["Pmax_opt"] = Pmax_opt
-    st.session_state["Isc_opt"] = Isc_opt
-    st.session_state["Voc_opt"] = Voc_opt
-    st.session_state["Vmp_opt"] = Vmp_opt
-    st.session_state["Imp_opt"] = Imp_opt
+    P_optimized = calculate_pmax(best_factors)
 
-    # ------------------ RESULTS ------------------
+    # ===============================
+    # 7️⃣ SAVE RESULTS
+    # ===============================
+    st.session_state["Pmax_optimized"] = P_optimized
+    st.session_state["ABC_error_before"] = abs(Pcalc - P_measured)
+    st.session_state["ABC_error_after"] = best_error
+
+    # ===============================
+    # 8️⃣ DISPLAY RESULTS
+    # ===============================
     st.markdown("---")
-    st.subheader("📊 Optimized Results Summary")
+    st.subheader("📊 Optimization Results")
 
-    colA, colB, colC = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
+    with col1:
+        st.metric("Calculated Pmax (W)", f"{Pcalc:.2f}")
+
+    with col2:
+        st.metric(
+            "Optimized Pmax (W)",
+            f"{P_optimized:.2f}",
+            delta=f"{P_optimized - Pcalc:.2f}"
+        )
+
+    with col3:
+        st.metric(
+            "Measured Pmax (W)",
+            f"{P_measured:.2f}"
+        )
+
+    st.markdown("### 🔧 Optimized Correction Factors")
+
+    st.write(f"• **Mismatch Factor (Fmm)** = {Fmm_opt:.3f}")
+    st.write(f"• **Cleaning Factor (Fclean)** = {Fclean_opt:.3f}")
+    st.write(f"• **Shading Factor (Fshade)** = {Fshade_opt:.3f}")
+
+    st.markdown("### 📉 Error Comparison")
+
+    colA, colB = st.columns(2)
     with colA:
-        st.metric("Optimized Pmax (W)", f"{Pmax_opt:.2f}", f"{Pmax_opt - Pmax_meas:.2f}")
-
+        st.metric("Error Before ABC (W)", f"{abs(Pcalc - P_measured):.3f}")
     with colB:
-        st.metric("Optimized Isc (A)", f"{Isc_opt:.3f}", f"{Isc_opt - Isc_meas:.3f}")
+        st.metric(
+            "Error After ABC (W)",
+            f"{best_error:.3f}",
+            delta=f"-{abs(Pcalc - P_measured - best_error):.3f}"
+        )
 
-    with colC:
-        st.metric("Optimized Voc (V)", f"{Voc_opt:.2f}", f"{Voc_opt - Voc_meas:.2f}")
-
-    colD, colE = st.columns(2)
-    with colD:
-        st.metric("Optimized Vmp (V)", f"{Vmp_opt:.2f}", f"{Vmp_opt - Vmp_meas:.2f}")
-    with colE:
-        st.metric("Optimized Imp (A)", f"{Imp_opt:.3f}")
-
-    # ------------------ FACTORS ------------------
-    st.markdown("---")
-    st.subheader("⚙ Optimized Loss Factors")
-
-    st.success(f"**Fclean (Cleaning Factor)** = {Fclean_opt:.3f}")
-    st.success(f"**Fshade (Shading Factor)** = {Fshade_opt:.3f}")
-    st.success(f"**Fmm (Mismatch Factor)** = {Fmm_opt:.3f}")
-
-    st.info(f"Total Optimization Error = **{best_err:.3f}**")
+    st.success("✅ ABC Optimization completed successfully.")
