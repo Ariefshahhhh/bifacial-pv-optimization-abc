@@ -25,10 +25,10 @@ with col1:
 # ---------- RIGHT ----------
 with col2:
     st.subheader("🌡 Temperature Coefficients")
-    alpha = st.number_input("α (Isc coeff, %/°C)", value=0.040, format="%.3f")
-    beta  = st.number_input("β (Voc coeff, %/°C)", value=-0.280, format="%.3f")
-    alpha = st.number_input("α (Imp coeff, %/°C)", value=0.040, format="%.3f")
-    beta  = st.number_input("β (Vmp coeff, %/°C)", value=-0.280, format="%.3f")
+    alphasc = st.number_input("α (Isc coeff, %/°C)", value=0.040, format="%.3f")
+    betaoc  = st.number_input("β (Voc coeff, %/°C)", value=-0.280, format="%.3f")
+    alphamp = st.number_input("α (Imp coeff, %/°C)", value=0.040, format="%.3f")
+    betamp  = st.number_input("β (Vmp coeff, %/°C)", value=-0.280, format="%.3f")
     gamma = st.number_input("γ (Pmax coeff, %/°C)", value=-0.350, format="%.3f")
 
 
@@ -59,18 +59,29 @@ if st.button("Calculate Outputs"):
     else:
         Fage = 1 - 0.015 - 0.005 * (years - 1)
 
-
-    # Temperature factors
-    Ftemp_I = 1 + (alpha / 100) * (Tcell - 25)
-    Ftemp_V = 1 + (beta  / 100) * (Tcell - 25)
-    Ftemp_P = 1 + (gamma / 100) * (Tcell - 25)
-
-    # Electrical outputs
-    Isc = Isc_stc * Ftemp_I * Fg * Fclean * Fshade
-    Voc = Voc_stc * Ftemp_V
-    Vmp = Vmp_stc * Ftemp_V
-    Imp = Imp_stc * Ftemp_I * Fg * Fclean * Fshade
-    Pmax = Pmax_stc * Ftemp_P * Fg * Fclean * Fshade * Fmm * Fage
+    # -------- Temperature factors --------
+    # Fallback rules:
+    # - If alphamp not given → use alphasc
+    # - If betamp not given → use gamma
+    
+    if alphamp == 0:
+        alphamp = alphasc
+    
+    if betamp == 0:
+        betamp = gamma
+    
+    Ftemp_Isc = 1 + (alphasc / 100) * (Tcell - 25)
+    Ftemp_Imp = 1 + (alphamp / 100) * (Tcell - 25)
+    Ftemp_Voc = 1 + (betaoc  / 100) * (Tcell - 25)
+    Ftemp_Vmp = 1 + (betamp  / 100) * (Tcell - 25)
+    Ftemp_Pmp = 1 + (gamma   / 100) * (Tcell - 25)
+    
+    # -------- Electrical outputs --------
+    Isc  = Isc_stc  * Ftemp_Isc * Fg * Fclean * Fshade
+    Imp  = Imp_stc  * Ftemp_Imp * Fg * Fclean * Fshade
+    Voc  = Voc_stc  * Ftemp_Voc
+    Vmp  = Vmp_stc  * Ftemp_Vmp
+    Pmax = Pmax_stc * Ftemp_Pmp * Fg * Fclean * Fshade * Fmm * Fage
 
     # --- SAVE FOR ABC (THIS IS THE KEY PART) ---
     # --- SAVE FOR ABC (THIS IS THE KEY PART) ---
@@ -126,6 +137,9 @@ if st.button("Calculate Outputs"):
     )
 
     st.info("All calculations follow the datasheet-based PV computation formula at module level.")
+
+
+
 
 
 
