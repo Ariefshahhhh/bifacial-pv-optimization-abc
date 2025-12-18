@@ -71,11 +71,15 @@ if st.button("Calculate Outputs"):
 
     # --- SAVE FOR ABC (THIS IS THE KEY PART) ---
     # --- SAVE FOR ABC (THIS IS THE KEY PART) ---
-    st.session_state["Pmax_calc"] = Pmax
-    st.session_state["Isc_calc"] = Isc
-    st.session_state["Voc_calc"] = Voc
-    st.session_state["Vmp_calc"] = Vmp
-    st.session_state["Imp_calc"] = Imp
+    st.session_state["Pmax_calculated"] = Pmax
+    st.session_state["Pmax_STC"] = Pmax_stc
+    st.session_state["Ftemp_P"] = Ftemp_P
+    st.session_state["Fg"] = Fg
+    st.session_state["Fclean"] = Fclean
+    st.session_state["Fshade"] = Fshade
+    st.session_state["Fmm"] = Fmm
+    st.session_state["Fage"] = Fage
+
 
     # ------------------ OUTPUT ------------------
     st.markdown("---")
@@ -119,6 +123,7 @@ if st.button("Calculate Outputs"):
     )
 
     st.info("All calculations follow the datasheet-based PV computation formula at module level.")
+
 
 
 
