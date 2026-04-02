@@ -1,142 +1,113 @@
 import streamlit as st
-import numpy as np
+import random
 
-st.title("🐝 Artificial Bee Colony (ABC) Optimization")
-st.markdown(
-    "This page optimizes selected correction factors using the Artificial Bee Colony (ABC) algorithm "
-    "to minimize the error between **calculated** and **measured** maximum power (Pmax)."
-)
-st.markdown("---")
+st.title("🤖 ABC Optimization Tool")
+st.markdown("Optimize PV output using Artificial Bee Colony (ABC)")
 
-# -------------------------------------------------
-# CHECK REQUIRED DATA FROM CALCULATOR PAGE
-# -------------------------------------------------
-required_keys = [
-    "Pmax_calculated", "Pmax_STC", "Ftemp_P",
-    "Fg", "Fclean", "Fshade", "Fmm", "Fage"
-]
+# ------------------ CHECK DATA ------------------
 
-if not all(k in st.session_state for k in required_keys):
-    st.error("⚠️ Please complete the **Calculator page** first.")
+if "Pmax_calculated" not in st.session_state:
+    st.warning("⚠ Please run the Computation Tool first.")
     st.stop()
 
-# -------------------------------------------------
-# USER INPUT
-# -------------------------------------------------
-st.subheader("📥 Measured Data Input")
-
-Pmax_measured = st.number_input(
-    "Measured Maximum Power, Pmax_measured (W)",
-    value=float(st.session_state["Pmax_calculated"]),
-    step=1.0,
-    help="Measured output power obtained from field measurement or instrument."
-)
-
-# -------------------------------------------------
-# RETRIEVE BASE VALUES
-# -------------------------------------------------
-Pmax_STC = st.session_state["Pmax_STC"]
-Ftemp_P = st.session_state["Ftemp_P"]
+# Retrieve data from previous page
+Pmax = st.session_state["Pmax_calculated"]
+Pmax_stc = st.session_state["Pmax_STC"]
+Ftemp_Pmp = st.session_state["Ftemp_P"]
 Fg = st.session_state["Fg"]
-Fclean = st.session_state["Fclean"]
-Fshade = st.session_state["Fshade"]
-Fmm_base = st.session_state["Fmm"]
-Fage_base = st.session_state["Fage"]
 
-# -------------------------------------------------
-# ABC PARAMETERS
-# -------------------------------------------------
-st.subheader("⚙ ABC Algorithm Parameters")
+# User input for measured value
+P_measured = st.number_input("Measured Pmax (W)", value=480.0)
 
-num_bees = st.slider("Number of Bees", 10, 60, 30)
-iterations = st.slider("Number of Iterations", 20, 200, 50)
+# ------------------ OBJECTIVE FUNCTION ------------------
 
-# Optimize selected factors (Option A)
-bounds = {
-    "Fmm": (0.90, 1.00),
-    "Fclean": (0.90, 1.00),
-    "Fshade": (0.90, 1.00)
-}
+def objective_function(params):
+    Fclean, Fshade, Fmm, Fage = params
 
-# -------------------------------------------------
-# MODEL FUNCTIONS
-# -------------------------------------------------
-def calculate_pmax(Fmm, Fclean, Fshade):
-    return (
-        Pmax_STC *
-        Ftemp_P *
-        Fg *
-        Fclean *
-        Fshade *
-        Fmm *
-        Fage_base
-    )
+    P_calc = Pmax_stc * Ftemp_Pmp * Fg * Fclean * Fshade * Fmm * Fage
+    error = (P_calc - P_measured) ** 2
 
-def fitness(solution):
-    P_est = calculate_pmax(solution[0], solution[1], solution[2])
-    return abs(P_est - Pmax_measured)
+    return error
 
-# -------------------------------------------------
-# RUN ABC BUTTON
-# -------------------------------------------------
-st.markdown("---")
-run_abc = st.button("🐝 Run ABC Optimization")
+# ------------------ ABC FUNCTION ------------------
 
-if run_abc:
+def abc_optimization(iterations=50, colony_size=20):
 
-    # -------- INITIAL POPULATION --------
-    population = np.array([
-        [
-            np.random.uniform(*bounds["Fmm"]),
-            np.random.uniform(*bounds["Fclean"]),
-            np.random.uniform(*bounds["Fshade"])
-        ]
-        for _ in range(num_bees)
-    ])
+    bounds = [
+        (0.90, 1.00),  # Fclean
+        (0.90, 1.00),  # Fshade
+        (0.95, 1.00),  # Fmm
+        (0.85, 1.00)   # Fage
+    ]
 
-    best_solution = population[0]
-    best_error = fitness(best_solution)
+    population = [
+        [random.uniform(b[0], b[1]) for b in bounds]
+        for _ in range(colony_size)
+    ]
 
-    # -------- ABC MAIN LOOP --------
+    fitness = [objective_function(sol) for sol in population]
+
+    best_solution = population[fitness.index(min(fitness))]
+    best_error = min(fitness)
+
     for _ in range(iterations):
-        for i in range(num_bees):
+        for i in range(colony_size):
 
-            candidate = population[i] + np.random.uniform(-0.02, 0.02, 3)
-            candidate = np.clip(candidate, 0.9, 1.0)
+            new_solution = population[i].copy()
+            index = random.randint(0, len(bounds)-1)
 
-            if fitness(candidate) < fitness(population[i]):
-                population[i] = candidate
+            phi = random.uniform(-1, 1)
 
-            current_error = fitness(population[i])
-            if current_error < best_error:
-                best_error = current_error
-                best_solution = population[i]
+            new_solution[index] = new_solution[index] + phi * (
+                new_solution[index] - best_solution[index]
+            )
 
-    # -------- RESULTS --------
-    Fmm_opt, Fclean_opt, Fshade_opt = best_solution
-    Pmax_optimized = calculate_pmax(Fmm_opt, Fclean_opt, Fshade_opt)
+            # Apply bounds
+            new_solution[index] = max(bounds[index][0],
+                                      min(bounds[index][1],
+                                          new_solution[index]))
+
+            new_error = objective_function(new_solution)
+
+            if new_error < fitness[i]:
+                population[i] = new_solution
+                fitness[i] = new_error
+
+        best_solution = population[fitness.index(min(fitness))]
+        best_error = min(fitness)
+
+    return best_solution, best_error
+
+# ------------------ RUN OPTIMIZATION ------------------
+
+if st.button("Run ABC Optimization"):
+
+    best_params, best_error = abc_optimization()
+
+    Fclean_opt, Fshade_opt, Fmm_opt, Fage_opt = best_params
+
+    Pmax_opt = Pmax_stc * Ftemp_Pmp * Fg * Fclean_opt * Fshade_opt * Fmm_opt * Fage_opt
+
+    error_before = (Pmax - P_measured) ** 2
+    error_after = best_error
+
+    # ------------------ OUTPUT ------------------
 
     st.markdown("---")
-    st.subheader("✅ Optimization Results")
+    st.subheader("📊 Optimization Results")
 
-    col1, col2 = st.columns(2)
+    st.write(f"Measured Pmax = {P_measured:.2f} W")
 
-    with col1:
-        st.markdown("**🔧 Optimized Correction Factors**")
-        st.success(f"Mismatch Factor, Fmm = {Fmm_opt:.3f}")
-        st.success(f"Cleaning Factor, Fclean = {Fclean_opt:.3f}")
-        st.success(f"Shading Factor, Fshade = {Fshade_opt:.3f}")
+    st.write("### 🔹 Before Optimization")
+    st.write(f"Calculated Pmax = {Pmax:.2f} W")
+    st.write(f"Error = {error_before:.4f}")
 
-    with col2:
-        st.markdown("**⚡ Power Comparison**")
-        st.info(f"Calculated Pmax (Before ABC) = {st.session_state['Pmax_calculated']:.2f} W")
-        st.info(f"Optimized Pmax (After ABC) = {Pmax_optimized:.2f} W")
-        st.info(f"Measured Pmax = {Pmax_measured:.2f} W")
+    st.write("### 🔹 After Optimization")
+    st.success(f"Optimized Pmax = {Pmax_opt:.2f} W")
+    st.write(f"Error = {error_after:.4f}")
 
-    st.markdown("**📉 Optimization Accuracy**")
-    st.warning(f"Absolute Error after Optimization = {best_error:.2f} W")
-
-    st.markdown(
-        "> **Note:** The ABC algorithm iteratively adjusts the selected correction factors "
-        "to minimize the difference between calculated and measured Pmax, improving model accuracy."
-    )
+    st.write("### 🔧 Optimized Parameters")
+    st.write(f"Fclean = {Fclean_opt:.3f}")
+    st.write(f"Fshade = {Fshade_opt:.3f}")
+    st.write(f"Fmm = {Fmm_opt:.3f}")
+    st.write(f"Fage = {Fage_opt:.3f}")
