@@ -1,46 +1,77 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 
-st.title("📊 Results & Visual Analysis")
-st.markdown("---")
+st.title("📊 Results & Graph Analysis")
+st.markdown("Visualization of PV output before and after ABC optimization")
 
-if "P_optimized" not in st.session_state:
-    st.warning("⚠️ No optimization results available. Run ABC Optimization first.")
+# ------------------ CHECK DATA ------------------
+
+if "Pmax_calculated" not in st.session_state:
+    st.warning("⚠ Please run the Computation Tool first.")
     st.stop()
 
+if "Pmax_optimized" not in st.session_state:
+    st.warning("⚠ Please run ABC Optimization first.")
+    st.stop()
+
+# Retrieve data
+Pmax_calc = st.session_state["Pmax_calculated"]
+Pmax_opt = st.session_state["Pmax_optimized"]
 P_measured = st.session_state["P_measured"]
-Pout = st.session_state["P_calculated"]
-P_opt = st.session_state["P_optimized"]
-err_before = st.session_state["error_before"]
-err_after = st.session_state["error_after"]
 
-col1, col2, col3 = st.columns(3)
+# ------------------ BAR CHART ------------------
 
-with col1:
-    st.metric("Measured Power", f"{P_measured:.2f} W")
+st.subheader("🔋 Power Comparison")
 
-with col2:
-    st.metric("Calculated Power", f"{Pout:.2f} W", delta=f"{Pout - P_measured:.2f}")
-
-with col3:
-    st.metric("Optimized Power", f"{P_opt:.2f} W", delta=f"{P_opt - P_measured:.2f}")
-
-st.markdown("### 🔍 Power Comparison Chart")
+labels = ["Measured", "Calculated", "Optimized"]
+values = [P_measured, Pmax_calc, Pmax_opt]
 
 fig, ax = plt.subplots()
-ax.bar(["Measured", "Calculated", "Optimized"], [P_measured, Pout, P_opt])
+ax.bar(labels, values)
+ax.set_title("Pmax Comparison")
 ax.set_ylabel("Power (W)")
-ax.set_title("Measured vs Calculated vs Optimized")
-ax.grid(axis="y", linestyle="--")
+
 st.pyplot(fig)
 
-st.markdown("### 📉 Error Before vs After Optimization")
+# ------------------ ERROR ANALYSIS ------------------
+
+error_before = abs(Pmax_calc - P_measured)
+error_after = abs(Pmax_opt - P_measured)
+
+reduction = ((error_before - error_after) / error_before) * 100 if error_before != 0 else 0
+
+st.subheader("📉 Error Analysis")
+
+st.write(f"Error Before Optimization = {error_before:.2f} W")
+st.write(f"Error After Optimization = {error_after:.2f} W")
+st.success(f"Error Reduction = {reduction:.2f}%")
+
+# ------------------ ERROR BAR CHART ------------------
+
+st.subheader("📊 Error Comparison")
+
+error_labels = ["Before", "After"]
+error_values = [error_before, error_after]
 
 fig2, ax2 = plt.subplots()
-ax2.bar(["Before", "After"], [err_before, err_after])
-ax2.set_ylabel("Absolute Error (W)")
+ax2.bar(error_labels, error_values)
 ax2.set_title("Error Reduction")
-ax2.grid(axis="y", linestyle="--")
+ax2.set_ylabel("Error (W)")
+
 st.pyplot(fig2)
 
+# ------------------ OPTIONAL: CONVERGENCE ------------------
 
+if "abc_history" in st.session_state:
+
+    st.subheader("📈 ABC Convergence Curve")
+
+    history = st.session_state["abc_history"]
+
+    fig3, ax3 = plt.subplots()
+    ax3.plot(history)
+    ax3.set_title("ABC Convergence")
+    ax3.set_xlabel("Iteration")
+    ax3.set_ylabel("Error")
+
+    st.pyplot(fig3)
