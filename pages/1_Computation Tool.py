@@ -35,17 +35,10 @@ with col2:
 
     st.subheader("⚙ Loss & Correction Factors")
 
-    st.write("Dirt Level (%) [Range: 0 – 20%]")
-    dirt = st.number_input("Dirt Level (%)", min_value=0.0, max_value=20.0, value=5.0)
-    
-    st.write("Module Age (years) [Range: 0 – 25 years]")
-    years = st.number_input("Module Age (years)", min_value=0, max_value=25, value=10, step=1)
-    
-    st.write("Mismatch Factor (Fmm) [Range: 0.95 – 1.0]")
-    Fmm = st.number_input("Mismatch Factor (Fmm)", min_value=0.95, max_value=1.0, value=0.98)
-
-    st.write("Shading Factor (Fshade) [Range: 0.7 – 1.0]")
-    Fshade = st.number_input("Shading Factor (Fshade)", min_value=0.7, max_value=1.0, value=0.95)
+    dirt = st.number_input("Dirt Level (%) [Range: 0 – 20%]", min_value=0.0, max_value=20.0, value=5.0)
+    years = st.number_input("Module Age (years) [Range: 0 – 25 years]", min_value=0, max_value=25, value=10, step=1)
+    Fmm = st.number_input("Mismatch Factor (Fmm) [Range: 0.95 – 1.0]", min_value=0.95, max_value=1.0, value=0.98)
+    Fshade = st.number_input("Shading Factor (Fshade) [Range: 0.7 – 1.0]", min_value=0.7, max_value=1.0, value=0.95)
 
 # ------------------ CALCULATION ------------------
 if st.button("Calculate Outputs"):
