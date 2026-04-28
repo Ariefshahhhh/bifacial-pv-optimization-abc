@@ -55,7 +55,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("""
     <div class='section-card'>
-    <h3>🔋 PV Output Calculator</h3>
+    <h3>🔋 Computational Tool</h3>
     <p class='small-text'>
     Compute electrical outputs (Pmax, Vmp, Imp, Voc, Isc) based on irradiance,
     temperature, and bifacial gain factors.
