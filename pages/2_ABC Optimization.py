@@ -1,113 +1,112 @@
-import streamlit as st
 import random
 
-st.title("🤖 ABC Optimization Tool")
-st.markdown("Optimize PV output using Artificial Bee Colony (ABC)")
+st.markdown("---")
+st.subheader("🐝 ABC Optimization (Match Target Pmax)")
 
-# ------------------ CHECK DATA ------------------
+# 🎯 User target
+target_pmax = st.number_input("Enter Target Pmax (W)", value=400.0)
 
-if "Pmax_calculated" not in st.session_state:
-    st.warning("⚠ Please run the Computation Tool first.")
-    st.stop()
-
-# Retrieve data from previous page
-Pmax = st.session_state["Pmax_calculated"]
-Pmax_stc = st.session_state["Pmax_STC"]
-Ftemp_Pmp = st.session_state["Ftemp_P"]
-Fg = st.session_state["Fg"]
-
-# User input for measured value
-P_measured = st.number_input("Measured Pmax (W)", value=480.0)
-
-# ------------------ OBJECTIVE FUNCTION ------------------
-
-def objective_function(params):
-    Fclean, Fshade, Fmm, Fage = params
-
-    P_calc = Pmax_stc * Ftemp_Pmp * Fg * Fclean * Fshade * Fmm * Fage
-    error = (P_calc - P_measured) ** 2
-
-    return error
-
-# ------------------ ABC FUNCTION ------------------
-
-def abc_optimization(iterations=50, colony_size=20):
-
-    bounds = [
-        (0.90, 1.00),  # Fclean
-        (0.90, 1.00),  # Fshade
-        (0.95, 1.00),  # Fmm
-        (0.85, 1.00)   # Fage
-    ]
-
-    population = [
-        [random.uniform(b[0], b[1]) for b in bounds]
-        for _ in range(colony_size)
-    ]
-
-    fitness = [objective_function(sol) for sol in population]
-
-    best_solution = population[fitness.index(min(fitness))]
-    best_error = min(fitness)
-
-    for _ in range(iterations):
-        for i in range(colony_size):
-
-            new_solution = population[i].copy()
-            index = random.randint(0, len(bounds)-1)
-
-            phi = random.uniform(-1, 1)
-
-            new_solution[index] = new_solution[index] + phi * (
-                new_solution[index] - best_solution[index]
-            )
-
-            # Apply bounds
-            new_solution[index] = max(bounds[index][0],
-                                      min(bounds[index][1],
-                                          new_solution[index]))
-
-            new_error = objective_function(new_solution)
-
-            if new_error < fitness[i]:
-                population[i] = new_solution
-                fitness[i] = new_error
-
-        best_solution = population[fitness.index(min(fitness))]
-        best_error = min(fitness)
-
-    return best_solution, best_error
-
-# ------------------ RUN OPTIMIZATION ------------------
+# 🐝 Number of bees (user adjustable)
+num_bees = st.slider("Number of Bees", 5, 100, 30)
 
 if st.button("Run ABC Optimization"):
 
-    best_params, best_error = abc_optimization()
+    # Objective: minimize error
+    def objective(Fmm_candidate):
+        P_test = (
+            Pmax_stc
+            * Ftemp_Pmp
+            * Fg
+            * Fclean
+            * Fshade
+            * Fmm_candidate
+            * Fage
+        )
+        return abs(P_test - target_pmax)
 
-    Fclean_opt, Fshade_opt, Fmm_opt, Fage_opt = best_params
+    # Random Fmm
+    def random_solution():
+        return random.uniform(0.95, 1.0)
 
-    Pmax_opt = Pmax_stc * Ftemp_Pmp * Fg * Fclean_opt * Fshade_opt * Fmm_opt * Fage_opt
+    # Initialize
+    solutions = [random_solution() for _ in range(num_bees)]
+    fitness = [objective(sol) for sol in solutions]
+    trial = [0] * num_bees
 
-    error_before = (Pmax - P_measured) ** 2
-    error_after = best_error
+    limit = 10
+    max_cycles = 100
 
-    # ------------------ OUTPUT ------------------
+    for cycle in range(max_cycles):
 
-    st.markdown("---")
-    st.subheader("📊 Optimization Results")
+        # Employed Bees
+        for i in range(num_bees):
+            k = random.randint(0, num_bees - 1)
+            while k == i:
+                k = random.randint(0, num_bees - 1)
 
-    st.write(f"Measured Pmax = {P_measured:.2f} W")
+            phi = random.uniform(-1, 1)
+            new_sol = solutions[i] + phi * (solutions[i] - solutions[k])
 
-    st.write("### 🔹 Before Optimization")
-    st.write(f"Calculated Pmax = {Pmax:.2f} W")
-    st.write(f"Error = {error_before:.4f}")
+            # Keep within bounds
+            new_sol = max(0.95, min(1.0, new_sol))
 
-    st.write("### 🔹 After Optimization")
-    st.success(f"Optimized Pmax = {Pmax_opt:.2f} W")
-    st.write(f"Error = {error_after:.4f}")
+            new_fit = objective(new_sol)
 
-    st.write("### 🔧 Optimized Parameters")
-    st.write(f"Fclean = {Fclean_opt:.3f}")
-    st.write(f"Fshade = {Fshade_opt:.3f}")
-    st.write(f"Fmm = {Fmm_opt:.3f}")
-    st.write(f"Fage = {Fage_opt:.3f}")
+            if new_fit < fitness[i]:
+                solutions[i] = new_sol
+                fitness[i] = new_fit
+                trial[i] = 0
+            else:
+                trial[i] += 1
+
+        # Onlooker Bees
+        prob = [1 / (1 + f) for f in fitness]
+        total_prob = sum(prob)
+        prob = [p / total_prob for p in prob]
+
+        for i in range(num_bees):
+            if random.random() < prob[i]:
+                k = random.randint(0, num_bees - 1)
+                while k == i:
+                    k = random.randint(0, num_bees - 1)
+
+                phi = random.uniform(-1, 1)
+                new_sol = solutions[i] + phi * (solutions[i] - solutions[k])
+
+                new_sol = max(0.95, min(1.0, new_sol))
+
+                new_fit = objective(new_sol)
+
+                if new_fit < fitness[i]:
+                    solutions[i] = new_sol
+                    fitness[i] = new_fit
+                    trial[i] = 0
+                else:
+                    trial[i] += 1
+
+        # Scout Bees
+        for i in range(num_bees):
+            if trial[i] > limit:
+                solutions[i] = random_solution()
+                fitness[i] = objective(solutions[i])
+                trial[i] = 0
+
+    # Best solution
+    best_index = fitness.index(min(fitness))
+    best_Fmm = solutions[best_index]
+
+    # Final optimized Pmax
+    optimized_Pmax = (
+        Pmax_stc
+        * Ftemp_Pmp
+        * Fg
+        * Fclean
+        * Fshade
+        * best_Fmm
+        * Fage
+    )
+
+    # 🔥 OUTPUT
+    st.success(f"Optimal Fmm = {best_Fmm:.4f}")
+    st.success(f"Optimized Pmax = {optimized_Pmax:.4f} W")
+    st.write(f"Target Pmax = {target_pmax:.4f} W")
