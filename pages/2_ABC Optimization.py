@@ -1,6 +1,4 @@
 import random
-
-st.markdown("---")
 st.subheader("🐝 ABC Optimization (Match Target Pmax)")
 
 # 🎯 User target
