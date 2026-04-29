@@ -191,6 +191,18 @@ if st.button("🐝 Run ABC Optimization"):
         )
 
     BG_opt, dirt_opt, Fmm_opt, Fshade_opt = best_sol
+    
+    # --- SAVE RESULTS FOR PAGE 3 ---
+    st.session_state["abc_best_pmax"] = best_pmax
+    st.session_state["abc_best_sol"] = best_sol
+    st.session_state["abc_error_history"] = error_history
+    st.session_state["abc_pmax_meas"] = Pmax_meas
+    
+    # Optional (for full table in Page 3)
+    st.session_state["abc_vmp_meas"] = Vmp_meas
+    st.session_state["abc_imp_meas"] = Imp_meas
+    st.session_state["abc_voc_meas"] = Voc_meas
+    st.session_state["abc_isc_meas"] = Isc_meas
 
     G_front    = Fg * 1000
     G_total    = G_front * (1 + BG_opt)
