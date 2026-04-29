@@ -1,333 +1,134 @@
 import streamlit as st
 
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Bifacial PV Computation Tool",
-    page_icon="⚡",
-    layout="wide",
-)
+st.set_page_config(page_title="Bifacial PV Computation Tool", layout="wide")
 
-# ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+    html, body, [class*="css"] { font-family: 'Segoe UI', sans-serif; }
 
-/* ── Root palette ── */
-:root {
-    --bg:        #0b0f1a;
-    --surface:   #111827;
-    --card:      #161d2e;
-    --border:    #1e2d47;
-    --accent:    #f5a623;
-    --accent2:   #3b82f6;
-    --success:   #10b981;
-    --text:      #e8edf5;
-    --muted:     #6b7fa3;
-    --font-head: 'Syne', sans-serif;
-    --font-mono: 'DM Mono', monospace;
-}
+    .page-title {
+        font-size: 1.75rem; font-weight: 700; color: #1e293b; margin-bottom: 0.15rem;
+    }
+    .page-sub { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
 
-/* ── Base ── */
-html, body, [data-testid="stAppViewContainer"] {
-    background: var(--bg) !important;
-    color: var(--text) !important;
-    font-family: var(--font-mono) !important;
-}
+    .section-header {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.13em;
+        text-transform: uppercase; color: #2563eb;
+        border-bottom: 2px solid #2563eb;
+        padding-bottom: 4px; margin: 1.4rem 0 0.75rem 0;
+    }
 
-[data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stSidebar"] { background: var(--surface) !important; }
+    label, [data-testid="stWidgetLabel"] p {
+        font-size: 0.8rem !important; color: #374151 !important; font-weight: 500 !important;
+    }
 
-/* ── Hide default Streamlit chrome ── */
-#MainMenu, footer, header { visibility: hidden; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.2rem 0; }
 
-/* ── Hero banner ── */
-.hero {
-    background: linear-gradient(135deg, #0f1c35 0%, #0b0f1a 60%, #1a0f2e 100%);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2.5rem 3rem;
-    margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
-}
-.hero::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 260px; height: 260px;
-    background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
-    border-radius: 50%;
-}
-.hero::after {
-    content: '';
-    position: absolute;
-    bottom: -40px; left: 20%;
-    width: 180px; height: 180px;
-    background: radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%);
-    border-radius: 50%;
-}
-.hero-title {
-    font-family: var(--font-head);
-    font-size: 2.4rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--text);
-    margin: 0 0 0.4rem 0;
-    line-height: 1.1;
-}
-.hero-title span { color: var(--accent); }
-.hero-sub {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
+    .result-row {
+        display: grid; grid-template-columns: repeat(5, 1fr);
+        gap: 0.75rem; margin: 1rem 0 1.5rem 0;
+    }
+    .result-card {
+        background: #f8fafc; border: 1px solid #e2e8f0;
+        border-top: 3px solid #2563eb; border-radius: 8px;
+        padding: 0.9rem 1rem; text-align: center;
+    }
+    .result-card.highlight { background: #eff6ff; border-top-color: #1d4ed8; }
+    .rc-label {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase; color: #6b7280; margin-bottom: 0.3rem;
+    }
+    .rc-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; line-height: 1.1; }
+    .result-card.highlight .rc-value { color: #1d4ed8; }
+    .rc-unit { font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem; }
 
-/* ── Section headers ── */
-.section-label {
-    font-family: var(--font-head);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin: 1.8rem 0 0.8rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-}
+    .steps-wrap {
+        background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 8px; overflow: hidden; margin-top: 0.5rem;
+    }
+    .step-row {
+        display: flex; align-items: flex-start; gap: 0.9rem;
+        padding: 0.65rem 1.1rem; border-bottom: 1px solid #e2e8f0;
+        font-size: 0.82rem; color: #374151; line-height: 1.65;
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-row:nth-child(even) { background: #ffffff; }
+    .step-n {
+        min-width: 22px; height: 22px; background: #2563eb; color: #fff;
+        border-radius: 50%; font-size: 0.65rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        margin-top: 2px; flex-shrink: 0;
+    }
+    .step-row b { color: #1e293b; }
 
-/* ── Input cards ── */
-[data-testid="stNumberInput"] > div,
-[data-testid="stTextInput"] > div {
-    background: var(--card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 8px !important;
-    transition: border-color 0.2s;
-}
-[data-testid="stNumberInput"] > div:focus-within,
-[data-testid="stTextInput"] > div:focus-within {
-    border-color: var(--accent2) !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important;
-}
-[data-testid="stNumberInput"] input,
-[data-testid="stTextInput"] input {
-    background: transparent !important;
-    color: var(--text) !important;
-    font-family: var(--font-mono) !important;
-    font-size: 0.9rem !important;
-}
-label, .stNumberInput label, [data-testid="stWidgetLabel"] {
-    color: var(--muted) !important;
-    font-family: var(--font-mono) !important;
-    font-size: 0.78rem !important;
-    letter-spacing: 0.04em !important;
-}
+    .info-note {
+        font-size: 0.78rem; color: #1d4ed8; background: #eff6ff;
+        border: 1px solid #bfdbfe; border-radius: 6px;
+        padding: 0.6rem 1rem; margin-top: 1rem;
+    }
 
-/* ── Calculate button ── */
-[data-testid="stButton"] > button {
-    background: linear-gradient(135deg, var(--accent) 0%, #e8920f 100%) !important;
-    color: #0b0f1a !important;
-    font-family: var(--font-head) !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    letter-spacing: 0.04em !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 0.75rem 3rem !important;
-    width: 100% !important;
-    transition: opacity 0.2s, transform 0.15s !important;
-    box-shadow: 0 4px 24px rgba(245,166,35,0.25) !important;
-}
-[data-testid="stButton"] > button:hover {
-    opacity: 0.9 !important;
-    transform: translateY(-1px) !important;
-}
-
-/* ── Result cards ── */
-.result-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 1rem;
-    margin: 1.5rem 0;
-}
-.result-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.2rem 1rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-.result-card.primary {
-    border-color: var(--accent);
-    background: linear-gradient(160deg, #1f1608 0%, var(--card) 60%);
-}
-.result-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--border);
-}
-.result-card.primary::before { background: var(--accent); }
-.result-label {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-}
-.result-value {
-    font-family: var(--font-head);
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1;
-}
-.result-card.primary .result-value { color: var(--accent); }
-.result-unit {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--muted);
-    margin-top: 0.3rem;
-}
-
-/* ── Steps ── */
-.steps-box {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem 1.8rem;
-    margin-top: 1rem;
-}
-.step-row {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid var(--border);
-}
-.step-row:last-child { border-bottom: none; }
-.step-num {
-    font-family: var(--font-head);
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--accent);
-    background: rgba(245,166,35,0.1);
-    border-radius: 4px;
-    padding: 2px 7px;
-    white-space: nowrap;
-    margin-top: 2px;
-}
-.step-text {
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    color: var(--muted);
-    line-height: 1.7;
-}
-.step-text strong { color: var(--text); }
-
-/* ── Info bar ── */
-.info-bar {
-    background: rgba(59,130,246,0.08);
-    border: 1px solid rgba(59,130,246,0.25);
-    border-radius: 8px;
-    padding: 0.7rem 1.2rem;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: #93c5fd;
-    margin-top: 1rem;
-}
-
-/* ── Divider ── */
-hr { border-color: var(--border) !important; margin: 1.5rem 0 !important; }
-
-/* ── Column gap ── */
-[data-testid="stHorizontalBlock"] { gap: 2rem !important; }
-
-/* ── Streamlit success/info override (hide default) ── */
-[data-testid="stAlert"] { display: none !important; }
+    [data-testid="stButton"] > button {
+        background-color: #2563eb !important; color: #ffffff !important;
+        font-weight: 600 !important; font-size: 0.88rem !important;
+        border: none !important; border-radius: 6px !important;
+        padding: 0.55rem 2.5rem !important;
+    }
+    [data-testid="stButton"] > button:hover { background-color: #1d4ed8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Hero ───────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="hero">
-    <div class="hero-title">⚡ Bifacial PV <span>Computation</span> Tool</div>
-    <div class="hero-sub">Compute Pmax · Vmp · Imp · Voc · Isc — datasheet-based formulas</div>
-</div>
-""", unsafe_allow_html=True)
+# ── Header ────────────────────────────────────────────────────────────────────
+st.markdown('<div class="page-title">⚡ Bifacial PV Output Computation Tool</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-sub">Compute Pmax, Vmp, Imp, Voc, and Isc using datasheet-based formulas.</div>', unsafe_allow_html=True)
+st.markdown('<hr>', unsafe_allow_html=True)
 
-# ── INPUT LAYOUT ───────────────────────────────────────────────────────────────
-col1, col2 = st.columns(2)
+# ── Inputs ────────────────────────────────────────────────────────────────────
+col1, col2 = st.columns(2, gap="large")
 
-# ---------- LEFT ----------
 with col1:
-    st.markdown('<div class="section-label">🔆 Environmental Inputs</div>', unsafe_allow_html=True)
-    G_front = st.number_input("Front Irradiance (W/m²)", value=800.0)
-    BG      = st.number_input("Bifacial Gain (BG)", value=0.15)
-    Tcell   = st.number_input("Cell Temperature (°C)", value=30.0)
+    st.markdown('<div class="section-header">🔆 Environmental Inputs</div>', unsafe_allow_html=True)
+    G_front  = st.number_input("Front Irradiance (W/m²)", value=800.0)
+    BG       = st.number_input("Bifacial Gain (BG)", value=0.15)
+    Tcell    = st.number_input("Cell Temperature (°C)", value=30.0)
 
-    st.markdown('<div class="section-label">📦 Module Electrical Data at STC</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">📦 Module Electrical Data at STC</div>', unsafe_allow_html=True)
     Pmax_stc = st.number_input("Pmax at STC (W)", value=450.0)
     Vmp_stc  = st.number_input("Vmp at STC (V)", value=41.0)
     Imp_stc  = st.number_input("Imp at STC (A)", value=10.98)
     Voc_stc  = st.number_input("Voc at STC (V)", value=49.5)
     Isc_stc  = st.number_input("Isc at STC (A)", value=11.5)
 
-# ---------- RIGHT ----------
 with col2:
-    st.markdown('<div class="section-label">🌡 Temperature Coefficients</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🌡 Temperature Coefficients</div>', unsafe_allow_html=True)
     alphasc = st.number_input("α (Isc coeff, %/°C)", value=0.040, format="%.3f")
     betaoc  = st.number_input("β (Voc coeff, %/°C)", value=-0.280, format="%.3f")
     alphamp = st.number_input("α (Imp coeff, %/°C)", value=0.040, format="%.3f")
     betamp  = st.number_input("β (Vmp coeff, %/°C)", value=-0.280, format="%.3f")
     gamma   = st.number_input("γ (Pmax coeff, %/°C)", value=-0.350, format="%.3f")
 
-    st.markdown('<div class="section-label">⚙ Loss & Correction Factors</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">⚙ Loss & Correction Factors</div>', unsafe_allow_html=True)
     dirt   = st.number_input("Dirt Level (%) [Range: 0 – 20%]", min_value=0.0, max_value=20.0, value=5.0)
     years  = st.number_input("Module Age (years) [Range: 0 – 25 years]", min_value=0, max_value=25, value=10, step=1)
     Fmm    = st.number_input("Mismatch Factor (Fmm) [Range: 0.95 – 1.0]", min_value=0.95, max_value=1.0, value=0.98)
     Fshade = st.number_input("Shading Factor (Fshade) [Range: 0.7 – 1.0]", min_value=0.7, max_value=1.0, value=0.95)
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown('<hr>', unsafe_allow_html=True)
 
-# ── CALCULATE BUTTON ───────────────────────────────────────────────────────────
-calc = st.button("⚡ Calculate Outputs")
+# ── Calculate ─────────────────────────────────────────────────────────────────
+if st.button("Calculate Outputs"):
 
-if calc:
-
-    # ── Rear & total irradiance ──
+    # Irradiance
     G_rear  = BG * G_front
     G_total = G_front + G_rear
+    Fg      = G_front / 1000
+    Fclean  = (100 - dirt) / 100
 
-    # ── Irradiance factor ──
-    Fg = G_front / 1000
+    # Fage
+    Fage = 1.0 if years <= 0 else 1 - 0.015 - 0.005 * (years - 1)
 
-    # ── Cleaning factor ──
-    Fclean = (100 - dirt) / 100
-
-    # ── Fage logic ──
-    if years <= 0:
-        Fage = 1.0
-    else:
-        Fage = 1 - 0.015 - 0.005 * (years - 1)
-
-    # ── Temperature factors (fallback rules) ──
-    if alphamp == 0:
-        alphamp = alphasc
-    if betamp == 0:
-        betamp = gamma
+    # Temperature factors (with fallback)
+    if alphamp == 0: alphamp = alphasc
+    if betamp  == 0: betamp  = gamma
 
     Ftemp_Isc = 1 + (alphasc / 100) * (Tcell - 25)
     Ftemp_Imp = 1 + (alphamp / 100) * (Tcell - 25)
@@ -335,14 +136,14 @@ if calc:
     Ftemp_Vmp = 1 + (betamp  / 100) * (Tcell - 25)
     Ftemp_Pmp = 1 + (gamma   / 100) * (Tcell - 25)
 
-    # ── Electrical outputs ──
+    # Electrical outputs
     Isc  = Isc_stc  * Ftemp_Isc * Fg * Fclean * Fshade
     Imp  = Imp_stc  * Ftemp_Imp * Fg * Fclean * Fshade
     Voc  = Voc_stc  * Ftemp_Voc
     Vmp  = Vmp_stc  * Ftemp_Vmp
     Pmax = Pmax_stc * Ftemp_Pmp * Fg * Fclean * Fshade * Fmm * Fage
 
-    # ── Save for ABC ──
+    # Save for ABC page
     st.session_state["Pmax_calculated"] = Pmax
     st.session_state["Pmax_STC"]        = Pmax_stc
     st.session_state["Ftemp_P"]         = Ftemp_Pmp
@@ -360,107 +161,90 @@ if calc:
     st.session_state["Voc_stc"]         = Voc_stc
     st.session_state["Vmp_stc"]         = Vmp_stc
 
-    # ── OUTPUT ─────────────────────────────────────────────────────────────────
-    st.markdown('<div class="section-label">📊 Calculated Electrical Outputs — Module Level</div>', unsafe_allow_html=True)
+    # ── Results ──────────────────────────────────────────────────────────────
+    st.markdown('<hr>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">📊 Calculated Electrical Outputs — Module Level</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="result-grid">
-        <div class="result-card primary">
-            <div class="result-label">Maximum Power Output</div>
-            <div class="result-value">{Pmax:.2f}</div>
-            <div class="result-unit">Pmax · W</div>
+    <div class="result-row">
+        <div class="result-card highlight">
+            <div class="rc-label">Pmax</div>
+            <div class="rc-value">{Pmax:.2f}</div>
+            <div class="rc-unit">W · Maximum Power Output</div>
         </div>
         <div class="result-card">
-            <div class="result-label">Voltage at Max Power</div>
-            <div class="result-value">{Vmp:.2f}</div>
-            <div class="result-unit">Vmp · V</div>
+            <div class="rc-label">Vmp</div>
+            <div class="rc-value">{Vmp:.2f}</div>
+            <div class="rc-unit">V · Voltage at Max Power</div>
         </div>
         <div class="result-card">
-            <div class="result-label">Current at Max Power</div>
-            <div class="result-value">{Imp:.2f}</div>
-            <div class="result-unit">Imp · A</div>
+            <div class="rc-label">Imp</div>
+            <div class="rc-value">{Imp:.2f}</div>
+            <div class="rc-unit">A · Current at Max Power</div>
         </div>
         <div class="result-card">
-            <div class="result-label">Open Circuit Voltage</div>
-            <div class="result-value">{Voc:.2f}</div>
-            <div class="result-unit">Voc · V</div>
+            <div class="rc-label">Voc</div>
+            <div class="rc-value">{Voc:.2f}</div>
+            <div class="rc-unit">V · Open Circuit Voltage</div>
         </div>
         <div class="result-card">
-            <div class="result-label">Short Circuit Current</div>
-            <div class="result-value">{Isc:.2f}</div>
-            <div class="result-unit">Isc · A</div>
+            <div class="rc-label">Isc</div>
+            <div class="rc-value">{Isc:.2f}</div>
+            <div class="rc-unit">A · Short Circuit Current</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Calculation Steps ───────────────────────────────────────────────────────
-    st.markdown('<div class="section-label">🧮 Calculation Steps</div>', unsafe_allow_html=True)
+    # ── Steps ─────────────────────────────────────────────────────────────────
+    st.markdown('<div class="section-header">🧮 Calculation Steps</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="steps-box">
-
+    <div class="steps-wrap">
         <div class="step-row">
-            <span class="step-num">01</span>
-            <div class="step-text">
-                Rear irradiance = BG × G_front = {BG} × {G_front} = <strong>{G_rear:.2f} W/m²</strong>
-            </div>
+            <div class="step-n">1</div>
+            <div>Rear irradiance = BG × G_front = {BG} × {G_front} = <b>{G_rear:.2f} W/m²</b></div>
         </div>
-
         <div class="step-row">
-            <span class="step-num">02</span>
-            <div class="step-text">
-                Total irradiance = G_front + G_rear = <strong>{G_total:.2f} W/m²</strong>
-            </div>
+            <div class="step-n">2</div>
+            <div>Total irradiance = G_front + G_rear = {G_front} + {G_rear:.2f} = <b>{G_total:.2f} W/m²</b></div>
         </div>
-
         <div class="step-row">
-            <span class="step-num">03</span>
-            <div class="step-text">
-                Irradiance factor Fg = G_front / 1000 = {G_front} / 1000 = <strong>{Fg:.3f}</strong>
-            </div>
+            <div class="step-n">3</div>
+            <div>Irradiance factor Fg = G_front / 1000 = {G_front} / 1000 = <b>{Fg:.3f}</b></div>
         </div>
-
         <div class="step-row">
-            <span class="step-num">04</span>
-            <div class="step-text">
+            <div class="step-n">4</div>
+            <div>
                 Temperature factors:<br>
-                · Ftemp,Isc = 1 + (α_Isc/100)(T−25) = <strong>{Ftemp_Isc:.3f}</strong><br>
-                · Ftemp,Imp = 1 + (α_Imp/100)(T−25) = <strong>{Ftemp_Imp:.3f}</strong><br>
-                · Ftemp,Voc = 1 + (β_Voc/100)(T−25) = <strong>{Ftemp_Voc:.3f}</strong><br>
-                · Ftemp,Vmp = 1 + (β_Vmp/100)(T−25) = <strong>{Ftemp_Vmp:.3f}</strong><br>
-                · Ftemp,Pmp = 1 + (γ/100)(T−25) = <strong>{Ftemp_Pmp:.3f}</strong>
+                &nbsp;&nbsp;· Ftemp,Isc = 1 + (α_Isc / 100)(T − 25) = <b>{Ftemp_Isc:.3f}</b><br>
+                &nbsp;&nbsp;· Ftemp,Imp = 1 + (α_Imp / 100)(T − 25) = <b>{Ftemp_Imp:.3f}</b><br>
+                &nbsp;&nbsp;· Ftemp,Voc = 1 + (β_Voc / 100)(T − 25) = <b>{Ftemp_Voc:.3f}</b><br>
+                &nbsp;&nbsp;· Ftemp,Vmp = 1 + (β_Vmp / 100)(T − 25) = <b>{Ftemp_Vmp:.3f}</b><br>
+                &nbsp;&nbsp;· Ftemp,Pmp = 1 + (γ / 100)(T − 25) = <b>{Ftemp_Pmp:.3f}</b>
             </div>
         </div>
-
         <div class="step-row">
-            <span class="step-num">05</span>
-            <div class="step-text">
-                Cleaning factor Fclean = (100 − dirt)/100 = (100 − {dirt})/100 = <strong>{Fclean:.3f}</strong>
-            </div>
+            <div class="step-n">5</div>
+            <div>Cleaning factor Fclean = (100 − dirt) / 100 = (100 − {dirt}) / 100 = <b>{Fclean:.3f}</b></div>
         </div>
-
         <div class="step-row">
-            <span class="step-num">06</span>
-            <div class="step-text">
-                Aging factor Fage — Year 1 degradation = 1.5%, subsequent years = 0.5%/year → <strong>Fage = {Fage:.3f}</strong>
-            </div>
+            <div class="step-n">6</div>
+            <div>Aging factor Fage — Year 1 degradation = 1.5%, subsequent years = 0.5%/year → <b>Fage = {Fage:.3f}</b></div>
         </div>
-
         <div class="step-row">
-            <span class="step-num">07</span>
-            <div class="step-text">
-                Isc = {Isc_stc:.3f} × {Ftemp_Isc:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} = <strong>{Isc:.2f} A</strong><br>
-                Voc = {Voc_stc:.3f} × {Ftemp_Voc:.3f} = <strong>{Voc:.2f} V</strong><br>
-                Vmp = {Vmp_stc:.3f} × {Ftemp_Vmp:.3f} = <strong>{Vmp:.2f} V</strong><br>
-                Imp = {Imp_stc:.3f} × {Ftemp_Imp:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} = <strong>{Imp:.2f} A</strong><br>
-                Pmax = {Pmax_stc:.1f} × {Ftemp_Pmp:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} × {Fmm:.3f} × {Fage:.3f} = <strong>{Pmax:.2f} W</strong>
+            <div class="step-n">7</div>
+            <div>
+                Isc &nbsp;= {Isc_stc:.3f} × {Ftemp_Isc:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} = <b>{Isc:.2f} A</b><br>
+                Voc = {Voc_stc:.3f} × {Ftemp_Voc:.3f} = <b>{Voc:.2f} V</b><br>
+                Vmp = {Vmp_stc:.3f} × {Ftemp_Vmp:.3f} = <b>{Vmp:.2f} V</b><br>
+                Imp &nbsp;= {Imp_stc:.3f} × {Ftemp_Imp:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} = <b>{Imp:.2f} A</b><br>
+                Pmax = {Pmax_stc:.1f} × {Ftemp_Pmp:.3f} × {Fg:.3f} × {Fclean:.3f} × {Fshade:.3f} × {Fmm:.3f} × {Fage:.3f} = <b>{Pmax:.2f} W</b>
             </div>
         </div>
-
     </div>
 
-    <div class="info-bar">
+    <div class="info-note">
         ℹ All calculations follow the datasheet-based PV computation formula at module level.
-        Results saved to session — proceed to the ABC Optimizer page.
+        Values have been saved — proceed to the ABC Optimizer page.
     </div>
     """, unsafe_allow_html=True)
