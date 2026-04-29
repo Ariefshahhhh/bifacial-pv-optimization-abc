@@ -277,10 +277,6 @@ if st.button("🐝 Run ABC Optimization"):
         c3.write(f"{calc:.4f}")
         c4.write(f"{err_p:.4f} %")
 
-    # --- Convergence ---
-    st.markdown("#### 📈 Error Convergence History")
-    st.line_chart({"Absolute Error — Pmax (W)": error_history})
-
     # --- Steps ---
     st.markdown("#### 🧮 Optimized Calculation Steps")
     st.write(f"1️⃣ G_front (from Fg) = {Fg:.4f} × 1000 = **{G_front:.2f} W/m²**")
