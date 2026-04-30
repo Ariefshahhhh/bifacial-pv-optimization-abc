@@ -4,6 +4,12 @@ st.set_page_config(page_title="Project Info", layout="centered")
 
 st.markdown("""
 <style>
+/* Match the dark theme */
+.stApp {
+    background-color: #0f1117;
+    color: #e6edf3;
+}
+
 .badge {
     display: inline-flex;
     align-items: center;
@@ -33,7 +39,7 @@ st.markdown("""
 }
 
 .chip {
-    background: #161b22;
+    background: #1c2128;
     border: 1px solid #30363d;
     border-radius: 6px;
     padding: 6px 14px;
@@ -42,8 +48,8 @@ st.markdown("""
 }
 
 .goal-box {
-    background: #0d1f0d;
-    border: 1px solid #238636;
+    background: #1a1f16;
+    border: 1px solid #3d4a1e;
     border-radius: 10px;
     padding: 1.2rem 1.5rem;
     margin: 1.5rem 0;
@@ -53,7 +59,7 @@ st.markdown("""
 }
 
 .goal-box strong {
-    color: #56d364;
+    color: #c9d645;
 }
 
 .footer-row {
@@ -75,6 +81,15 @@ st.markdown("""
     padding: 3px 10px;
     border-radius: 4px;
 }
+
+/* Streamlit default text color fix for dark bg */
+p, li, label {
+    color: #c9d1d9 !important;
+}
+
+h1, h2, h3 {
+    color: #e6edf3 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,14 +97,14 @@ st.markdown("""
 st.markdown('<div class="badge">🟢 Research Project</div>', unsafe_allow_html=True)
 
 # Title
-st.title("Output Power Optimization of Bifacial Photovoltaic Module")
-st.caption("Using Artificial Bee Colony (ABC) Algorithm")
+st.title("📘 Output Power Optimization of Bifacial Photovoltaic Module")
+st.markdown('<p style="color:#8b949e; font-size:0.9rem;">Using Artificial Bee Colony (ABC) Algorithm</p>', unsafe_allow_html=True)
 st.divider()
 
 # About
 st.markdown('<div class="section-label">About this project</div>', unsafe_allow_html=True)
 st.markdown("""
-<p style="color:#c9d1d9; font-size:0.92rem; line-height:1.75;">
+<p style="color:#c9d1d9; font-size:0.95rem; line-height:1.8;">
 This project integrates bifacial PV output modeling, environmental correction factors, and AI-based
 optimization using the ABC algorithm. It features real-time results visualization built on a
 multi-page Streamlit architecture.
@@ -100,7 +115,7 @@ multi-page Streamlit architecture.
 st.markdown('<div class="section-label">Core components</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="chip-row">
-    <div class="chip">☀ Bifacial PV Modeling</div>
+    <div class="chip">☀️ Bifacial PV Modeling</div>
     <div class="chip">🌍 Environmental Correction</div>
     <div class="chip">🧠 ABC Optimization</div>
     <div class="chip">📊 Real-time Visualization</div>
@@ -108,14 +123,16 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Goal box
+# Goal box — styled like the warning box in the screenshot
 st.markdown("""
 <div class="goal-box">
-    <div class="section-label" style="color:#56d364; margin-bottom:0.5rem;">Objective</div>
+    <div class="section-label" style="color:#a8b820; margin-bottom:0.5rem;">🎯 Objective</div>
     Reduce the error between <strong>calculated output</strong> and <strong>measured field data</strong>,
     improving prediction accuracy of bifacial PV systems using intelligent optimization.
 </div>
 """, unsafe_allow_html=True)
+
+st.divider()
 
 # Footer
 st.markdown("""
