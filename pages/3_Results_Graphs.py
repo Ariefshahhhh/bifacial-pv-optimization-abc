@@ -1,6 +1,6 @@
 import streamlit as st
 import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 
 st.title("📈 ABC Optimization — Results & Graphs")
 st.markdown("Full breakdown of optimization results, parameter comparison, and convergence graphs.")
@@ -8,9 +8,8 @@ st.markdown("---")
 
 # ------------------ CHECK SESSION STATE ------------------
 required_keys = [
-    "abc_best_pmax", "abc_best_sol", "abc_error_history",
-    "abc_pmax_meas", "Pmax_calculated", "Pmax_STC",
-    "Ftemp_P", "Fg", "Fage",
+    "abc_all_results", "abc_pmax_meas_list",
+    "Pmax_calculated", "Pmax_STC", "Ftemp_P", "Fg", "Fage",
 ]
 missing = [k for k in required_keys if k not in st.session_state]
 
@@ -22,188 +21,212 @@ if missing:
     st.stop()
 
 # ------------------ PULL VALUES ------------------
-best_pmax     = st.session_state["abc_best_pmax"]
-best_sol      = st.session_state["abc_best_sol"]
-error_history = st.session_state["abc_error_history"]
-Pmax_meas     = st.session_state["abc_pmax_meas"]
-Pmax_orig     = st.session_state["Pmax_calculated"]
-Pmax_stc      = st.session_state["Pmax_STC"]
-Ftemp_P       = st.session_state["Ftemp_P"]
-Fg            = st.session_state["Fg"]
-Fage          = st.session_state["Fage"]
+all_results    = st.session_state["abc_all_results"]
+pmax_meas_list = st.session_state["abc_pmax_meas_list"]
+Pmax_calc_list = st.session_state["Pmax_calculated"]
+Pmax_stc       = st.session_state["Pmax_STC"]
+Ftemp_P        = st.session_state["Ftemp_P"]
+Fg             = st.session_state["Fg"]
+Fage           = st.session_state["Fage"]
 
-Ftemp_Isc = st.session_state.get("Ftemp_Isc", 1.0)
-Ftemp_Imp = st.session_state.get("Ftemp_Imp", 1.0)
-Ftemp_Voc = st.session_state.get("Ftemp_Voc", 1.0)
-Ftemp_Vmp = st.session_state.get("Ftemp_Vmp", 1.0)
-Isc_stc   = st.session_state.get("Isc_stc", None)
-Imp_stc   = st.session_state.get("Imp_stc", None)
-Voc_stc   = st.session_state.get("Voc_stc", None)
-Vmp_stc   = st.session_state.get("Vmp_stc", None)
-
-Pmax_meas_val = st.session_state.get("abc_pmax_meas", 0.0)
-Vmp_meas      = st.session_state.get("abc_vmp_meas",  0.0)
-Imp_meas      = st.session_state.get("abc_imp_meas",  0.0)
-Voc_meas      = st.session_state.get("abc_voc_meas",  0.0)
-Isc_meas      = st.session_state.get("abc_isc_meas",  0.0)
-
-BG_opt, dirt_opt, Fmm_opt, Fshade_opt = best_sol
-
-G_front    = Fg * 1000
-G_total    = G_front * (1 + BG_opt)
-Fg_eff     = G_total / 1000
-Fclean_opt = (100 - dirt_opt) / 100
-
-abs_error  = abs(best_pmax - Pmax_meas)
-pct_error  = (abs_error / Pmax_meas * 100) if Pmax_meas != 0 else 0
-orig_error = abs(Pmax_orig - Pmax_meas)
-orig_pct   = (orig_error / Pmax_meas * 100) if Pmax_meas != 0 else 0
-improvement = orig_error - abs_error
+st.markdown("---")
 
 # ------------------ SECTION 1: OPTIMIZED FACTORS ------------------
 st.subheader("🔧 Optimized Controllable Factors")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Optimal BG",           f"{BG_opt:.4f}")
-col2.metric("Optimal Dirt (%)",     f"{dirt_opt:.4f}")
-col3.metric("Optimal Fmm",         f"{Fmm_opt:.4f}")
-col4.metric("Optimal Fshade",      f"{Fshade_opt:.4f}")
+header_cols = st.columns(5)
+for i, col in enumerate(header_cols):
+    col.markdown(f"**Set {i+1}**")
+
+for label, idx in [("BG", 0), ("Dirt (%)", 1), ("Fmm", 2), ("Fshade", 3)]:
+    row_cols = st.columns(5)
+    for i, col in enumerate(row_cols):
+        if all_results[i] is not None:
+            val = all_results[i][0][idx]
+            col.write(f"{label}: {val:.4f}")
+        else:
+            col.write(f"{label}: —")
 
 st.markdown("---")
 
 # ------------------ SECTION 2: PMAX COMPARISON ------------------
 st.subheader("⚡ Pmax — Measured vs Optimized")
 
-col_a, col_b, col_c, col_d = st.columns(4)
-col_a.metric("Measured Pmax (W)",   f"{Pmax_meas:.4f}")
-col_b.metric("Optimized Pmax (W)",  f"{best_pmax:.4f}")
-col_c.metric("Absolute Error (W)",  f"{abs_error:.4f}")
-col_d.metric("Error (%)",           f"{pct_error:.4f} %")
+result_cols = st.columns(5)
+for i, col in enumerate(result_cols):
+    col.markdown(f"**Set {i+1}**")
+    if all_results[i] is not None:
+        best_sol, best_pmax, error_history, Pmax_meas = all_results[i]
+        abs_error = abs(best_pmax - Pmax_meas)
+        pct_error = (abs_error / Pmax_meas * 100) if Pmax_meas != 0 else 0
+        col.write(f"Measured: {Pmax_meas:.4f} W")
+        col.write(f"Optimized: {best_pmax:.4f} W")
+        col.write(f"Abs Error: {abs_error:.4f} W")
+        col.write(f"Error: {pct_error:.4f} %")
+    else:
+        col.write("Skipped")
 
 st.markdown("---")
 
-# ------------------ SECTION 3: BEFORE vs AFTER ------------------
+# ------------------ SECTION 3: BEFORE VS AFTER ------------------
 st.subheader("📊 Before vs After ABC — Pmax")
 
-col_e, col_f, col_g, col_h = st.columns(4)
-col_e.metric("Before ABC — Pmax (W)",   f"{Pmax_orig:.4f}")
-col_f.metric("Before ABC — Error (W)",  f"{orig_error:.4f}")
-col_g.metric("After ABC — Pmax (W)",    f"{best_pmax:.4f}")
-col_h.metric("After ABC — Error (W)",   f"{abs_error:.4f}",
-             delta=f"{abs_error - orig_error:.4f} W", delta_color="inverse")
+bva_cols = st.columns(5)
+for i, col in enumerate(bva_cols):
+    col.markdown(f"**Set {i+1}**")
+    if all_results[i] is not None and i < len(Pmax_calc_list) and Pmax_calc_list[i] is not None:
+        _, best_pmax, _, Pmax_meas = all_results[i]
+        orig_pmax  = Pmax_calc_list[i]
+        orig_error = abs(orig_pmax - Pmax_meas)
+        new_error  = abs(best_pmax - Pmax_meas)
+        col.write(f"Before: {orig_pmax:.4f} W")
+        col.write(f"Before Err: {orig_error:.4f} W")
+        col.write(f"After: {best_pmax:.4f} W")
+        col.write(f"After Err: {new_error:.4f} W")
+    else:
+        col.write("—")
 
 st.markdown("---")
 
-# ------------------ SECTION 4: ALL FIVE OUTPUTS TABLE ------------------
-st.subheader("📋 Measured vs Calculated — All Five Outputs")
-
-rows = [("Pmax (W)", Pmax_meas, best_pmax)]
-
-if Isc_stc:
-    Isc_calc = Isc_stc * Ftemp_Isc * Fg_eff * Fclean_opt * Fshade_opt
-    rows.append(("Isc (A)", Isc_meas, Isc_calc))
-if Imp_stc:
-    Imp_calc = Imp_stc * Ftemp_Imp * Fg_eff * Fclean_opt * Fshade_opt
-    rows.append(("Imp (A)", Imp_meas, Imp_calc))
-if Voc_stc:
-    Voc_calc = Voc_stc * Ftemp_Voc
-    rows.append(("Voc (V)", Voc_meas, Voc_calc))
-if Vmp_stc:
-    Vmp_calc = Vmp_stc * Ftemp_Vmp
-    rows.append(("Vmp (V)", Vmp_meas, Vmp_calc))
-
-header = st.columns(4)
-header[0].markdown("**Parameter**")
-header[1].markdown("**Measured**")
-header[2].markdown("**Calculated**")
-header[3].markdown("**Error (%)**")
-
-for param, meas, calc in rows:
-    err_p = abs(calc - meas) / meas * 100 if meas != 0 else 0
-    c1, c2, c3, c4 = st.columns(4)
-    c1.write(param)
-    c2.write(f"{meas:.4f}")
-    c3.write(f"{calc:.4f}")
-    c4.write(f"{err_p:.4f} %")
-
-st.info(
-    "Voc and Vmp errors reflect temperature correction only — "
-    "they are not affected by the optimized factors (BG, dirt, Fmm, Fshade)."
-)
-
-st.markdown("---")
-
-# ------------------ SECTION 5: CALCULATION STEPS ------------------
+# ------------------ SECTION 4: CALCULATION STEPS ------------------
 st.subheader("🧮 Optimized Calculation Steps")
 
-st.write(f"1️⃣ G_front (from Fg) = {Fg:.4f} × 1000 = **{G_front:.2f} W/m²**")
-st.write(f"2️⃣ Total irradiance with optimal BG = {G_front:.2f} × (1 + {BG_opt:.4f}) = **{G_total:.2f} W/m²**")
-st.write(f"3️⃣ Effective Fg = {G_total:.2f} / 1000 = **{Fg_eff:.4f}**")
-st.write(f"4️⃣ Fclean = (100 − {dirt_opt:.4f}) / 100 = **{Fclean_opt:.4f}**")
-st.write(
-    f"5️⃣ Pmax = {Pmax_stc:.2f} × {Ftemp_P:.4f} × {Fg_eff:.4f} × "
-    f"{Fclean_opt:.4f} × {Fshade_opt:.4f} × {Fmm_opt:.4f} × {Fage:.4f} "
-    f"= **{best_pmax:.4f} W**"
-)
-st.write(
-    f"6️⃣ Absolute error = |{best_pmax:.4f} − {Pmax_meas:.4f}| "
-    f"= **{abs_error:.4f} W ({pct_error:.4f}%)**"
-)
+for i, result in enumerate(all_results):
+    if result is None:
+        continue
+    best_sol, best_pmax, error_history, Pmax_meas = result
+    BG_opt, dirt_opt, Fmm_opt, Fshade_opt = best_sol
+    G_front    = Fg * 1000
+    G_total    = G_front * (1 + BG_opt)
+    Fg_eff     = G_total / 1000
+    Fclean_opt = (100 - dirt_opt) / 100
+    abs_error  = abs(best_pmax - Pmax_meas)
+    pct_error  = (abs_error / Pmax_meas * 100) if Pmax_meas != 0 else 0
+
+    with st.expander(f"Set {i+1} — Calculation Steps"):
+        st.write(f"1️⃣ G_front (from Fg) = {Fg:.4f} × 1000 = **{G_front:.2f} W/m²**")
+        st.write(f"2️⃣ Total irradiance with optimal BG = {G_front:.2f} × (1 + {BG_opt:.4f}) = **{G_total:.2f} W/m²**")
+        st.write(f"3️⃣ Effective Fg = {G_total:.2f} / 1000 = **{Fg_eff:.4f}**")
+        st.write(f"4️⃣ Fclean = (100 − {dirt_opt:.4f}) / 100 = **{Fclean_opt:.4f}**")
+        st.write(
+            f"5️⃣ Pmax = {Pmax_stc:.2f} × {Ftemp_P:.4f} × {Fg_eff:.4f} × "
+            f"{Fclean_opt:.4f} × {Fshade_opt:.4f} × {Fmm_opt:.4f} × {Fage:.4f} "
+            f"= **{best_pmax:.4f} W**"
+        )
+        st.write(
+            f"6️⃣ Absolute error = |{best_pmax:.4f} − {Pmax_meas:.4f}| "
+            f"= **{abs_error:.4f} W ({pct_error:.4f}%)**"
+        )
 
 st.markdown("---")
 
-# ------------------ SECTION 6: GRAPHS ------------------
+# ------------------ SECTION 5: GRAPHS ------------------
 st.subheader("📈 Graphs")
 
-cycles = list(range(1, len(error_history) + 1))
+# ---- Graph 1: Combined Error Convergence (all 5 sets) ----
+st.markdown("#### Error Convergence History — All Sets")
 
-col_g1, col_g2 = st.columns(2)
-
-# ---- Graph 1: Error Convergence ----
-with col_g1:
-    st.markdown("#### Error Convergence History")
-    st.line_chart({"Absolute Error — Pmax (W)": error_history})
-    st.caption(
-        "Each point = best |Pmax_calc − Pmax_meas| found up to that cycle. "
-        "A flat tail means the algorithm has converged."
-    )
-
-# ---- Graph 2: Pmax Bar Comparison ----
-with col_g2:
-    st.markdown("#### Pmax — Measured vs Before/After ABC")
-    bar_data = {
-        "Pmax (W)": [Pmax_meas, Pmax_orig, best_pmax]
-    }
-    import pandas as pd
-    df_bar = pd.DataFrame(bar_data, index=["Measured", "Before ABC", "After ABC"])
-    st.bar_chart(df_bar)
-    st.caption("Compares the measured Pmax against the original calculated value and the ABC-optimized value.")
-
-# ---- Graph 3 & 4 (only if more than Pmax) ----
-if len(rows) > 1:
-    col_g3, col_g4 = st.columns(2)
-
-    # ---- Graph 3: Error % per parameter ----
-    with col_g3:
-        st.markdown("#### Error (%) per Output Parameter")
-        params = [r[0] for r in rows]
-        errors = [abs((r[2] - r[1]) / r[1] * 100) if r[1] != 0 else 0 for r in rows]
-        df_err = pd.DataFrame({"Error (%)": errors}, index=params)
-        st.bar_chart(df_err)
-        st.caption("Lower is better. Green threshold = 2%, amber = 5%.")
-
-    # ---- Graph 4: Measured vs Calculated per parameter ----
-    with col_g4:
-        st.markdown("#### Measured vs Calculated — All Parameters")
-        df_compare = pd.DataFrame(
-            {
-                "Measured":   [r[1] for r in rows],
-                "Calculated": [r[2] for r in rows],
-            },
-            index=[r[0] for r in rows]
+fig1, ax1 = plt.subplots(figsize=(10, 4))
+colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+for i, result in enumerate(all_results):
+    if result is not None:
+        _, _, error_history, _ = result
+        ax1.plot(
+            range(1, len(error_history) + 1),
+            error_history,
+            label=f"Set {i+1}",
+            color=colors[i],
+            linewidth=1.8
         )
-        st.bar_chart(df_compare)
-        st.caption("Side-by-side comparison of measured field values vs ABC-optimized calculated values.")
+ax1.set_xlabel("Cycle")
+ax1.set_ylabel("Absolute Error — Pmax (W)")
+ax1.set_title("ABC Convergence: |Pmax_calc − Pmax_meas| per Cycle")
+ax1.legend(title="Input Set", loc="upper right")
+ax1.grid(True, linestyle="--", alpha=0.5)
+plt.tight_layout()
+st.pyplot(fig1)
+st.caption("Each line shows how the best error for that set decreased over ABC cycles. A flat tail means convergence.")
+
+st.markdown("---")
+
+# ---- Graph 2: Pmax Bar — Measured vs Before vs After (grouped) ----
+st.markdown("#### Pmax — Measured vs Before ABC vs After ABC")
+
+set_labels  = [f"Set {i+1}" for i in range(5) if all_results[i] is not None]
+meas_vals   = []
+before_vals = []
+after_vals  = []
+
+for i, result in enumerate(all_results):
+    if result is None:
+        continue
+    _, best_pmax, _, Pmax_meas = result
+    meas_vals.append(Pmax_meas)
+    before_vals.append(Pmax_calc_list[i] if i < len(Pmax_calc_list) and Pmax_calc_list[i] is not None else 0)
+    after_vals.append(best_pmax)
+
+x = range(len(set_labels))
+width = 0.25
+
+fig2, ax2 = plt.subplots(figsize=(10, 4))
+bars1 = ax2.bar([p - width for p in x], meas_vals,   width, label="Measured",   color="#2ca02c")
+bars2 = ax2.bar([p         for p in x], before_vals, width, label="Before ABC", color="#1f77b4")
+bars3 = ax2.bar([p + width for p in x], after_vals,  width, label="After ABC",  color="#ff7f0e")
+
+ax2.set_xticks(list(x))
+ax2.set_xticklabels(set_labels)
+ax2.set_ylabel("Pmax (W)")
+ax2.set_title("Pmax Comparison per Set")
+ax2.legend(title="Category", loc="upper right")
+ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
+
+for bar in [bars1, bars2, bars3]:
+    for b in bar:
+        ax2.text(b.get_x() + b.get_width()/2, b.get_height() + 0.3,
+                 f"{b.get_height():.1f}", ha="center", va="bottom", fontsize=7)
+
+plt.tight_layout()
+st.pyplot(fig2)
+st.caption("Green = measured field value. Blue = original calculated Pmax (before ABC). Orange = ABC-optimized Pmax.")
+
+st.markdown("---")
+
+# ---- Graph 3: Error % per set (Before vs After) ----
+st.markdown("#### Error (%) — Before vs After ABC per Set")
+
+before_errors = []
+after_errors  = []
+
+for i, result in enumerate(all_results):
+    if result is None:
+        continue
+    _, best_pmax, _, Pmax_meas = result
+    orig = Pmax_calc_list[i] if i < len(Pmax_calc_list) and Pmax_calc_list[i] is not None else 0
+    before_errors.append(abs(orig - Pmax_meas) / Pmax_meas * 100 if Pmax_meas != 0 else 0)
+    after_errors.append(abs(best_pmax - Pmax_meas) / Pmax_meas * 100 if Pmax_meas != 0 else 0)
+
+x2 = range(len(set_labels))
+fig3, ax3 = plt.subplots(figsize=(10, 4))
+b1 = ax3.bar([p - width/2 for p in x2], before_errors, width, label="Before ABC", color="#1f77b4")
+b2 = ax3.bar([p + width/2 for p in x2], after_errors,  width, label="After ABC",  color="#ff7f0e")
+
+ax3.set_xticks(list(x2))
+ax3.set_xticklabels(set_labels)
+ax3.set_ylabel("Error (%)")
+ax3.set_title("Pmax Error (%) Before and After ABC Optimization")
+ax3.legend(title="Stage", loc="upper right")
+ax3.axhline(y=2, color="green",  linestyle="--", linewidth=1, label="2% threshold")
+ax3.axhline(y=5, color="orange", linestyle="--", linewidth=1, label="5% threshold")
+ax3.grid(True, axis="y", linestyle="--", alpha=0.5)
+
+for b in [b1, b2]:
+    for bar in b:
+        ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05,
+                 f"{bar.get_height():.2f}%", ha="center", va="bottom", fontsize=7)
+
+plt.tight_layout()
+st.pyplot(fig3)
+st.caption("Blue = error before ABC. Orange = error after ABC. Green line = 2% threshold, orange line = 5% threshold.")
 
 st.markdown("---")
 st.info(
