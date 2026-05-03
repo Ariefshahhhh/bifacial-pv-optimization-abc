@@ -17,44 +17,33 @@ if missing:
     st.stop()
 
 # ------------------ IMPORT FIXED VALUES ------------------
-Pmax_stc  = st.session_state["Pmax_STC"]
-Ftemp_P   = st.session_state["Ftemp_P"]
-Fg        = st.session_state["Fg"]
-Fage      = st.session_state["Fage"]
-
-Ftemp_Isc = st.session_state.get("Ftemp_Isc", 1.0)
-Ftemp_Imp = st.session_state.get("Ftemp_Imp", 1.0)
-Ftemp_Voc = st.session_state.get("Ftemp_Voc", 1.0)
-Ftemp_Vmp = st.session_state.get("Ftemp_Vmp", 1.0)
-Isc_stc   = st.session_state.get("Isc_stc",   None)
-Imp_stc   = st.session_state.get("Imp_stc",   None)
-Voc_stc   = st.session_state.get("Voc_stc",   None)
-Vmp_stc   = st.session_state.get("Vmp_stc",   None)
+Pmax_stc = st.session_state["Pmax_STC"]
+Ftemp_P  = st.session_state["Ftemp_P"]
+Fg       = st.session_state["Fg"]
+Fage     = st.session_state["Fage"]
 
 st.subheader("📥 Imported Fixed Values (from Computational Tool)")
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Pmax STC (W)",  f"{Pmax_stc:.2f}")
-col2.metric("Ftemp_Pmp",     f"{Ftemp_P:.4f}")
-col3.metric("Fg",            f"{Fg:.4f}")
-col4.metric("Fage",          f"{Fage:.4f}")
+col1.metric("Pmax STC (W)", f"{Pmax_stc:.2f}")
+col2.metric("Ftemp_Pmp",    f"{Ftemp_P:.4f}")
+col3.metric("Fg",           f"{Fg:.4f}")
+col4.metric("Fage",         f"{Fage:.4f}")
 
 st.markdown("---")
 
-# ------------------ MEASURED DATA INPUT ------------------
-st.subheader("📋 Measured Data (Field Measurements)")
-st.markdown("Enter the values measured from your actual PV module in the field.")
+# ------------------ 5 SETS OF MEASURED PMAX ------------------
+st.subheader("📋 Measured Pmax (5 Sets)")
 
-col_m1, col_m2 = st.columns(2)
-with col_m1:
-    Pmax_meas = st.number_input("Measured Pmax (W)",  min_value=0.0, value=0.0, format="%.4f")
-    Vmp_meas  = st.number_input("Measured Vmp (V)",   min_value=0.0, value=0.0, format="%.4f")
-    Isc_meas  = st.number_input("Measured Isc (A)",   min_value=0.0, value=0.0, format="%.4f")
-with col_m2:
-    Imp_meas  = st.number_input("Measured Imp (A)",   min_value=0.0, value=0.0, format="%.4f")
-    Voc_meas  = st.number_input("Measured Voc (V)",   min_value=0.0, value=0.0, format="%.4f")
+pmax_meas_list = []
+cols = st.columns(5)
+for i, col in enumerate(cols):
+    with col:
+        st.markdown(f"**Set {i+1}**")
+        val = col.number_input(f"Measured Pmax (W)", min_value=0.0, value=0.0, format="%.4f", key=f"pmax_meas_{i}")
+        pmax_meas_list.append(val)
 
-if Pmax_meas <= 0:
-    st.info("ℹ️ Enter your measured Pmax above to enable optimization.")
+if all(v <= 0 for v in pmax_meas_list):
+    st.info("ℹ️ Enter at least one measured Pmax above to enable optimization.")
     st.stop()
 
 st.markdown("---")
@@ -74,21 +63,6 @@ st.markdown("---")
 
 # ------------------ ABC ALGORITHM ------------------
 def abc_optimize(Pmax_stc, Ftemp_P, Fg, Fage, Pmax_meas, num_bees, max_cycles, limit):
-    """
-    Optimize 4 controllable factors to minimise |Pmax_calc - Pmax_meas|.
-
-    Variables (solution vector):
-        x[0] = BG      — bifacial gain       [0.00, 0.35]
-        x[1] = dirt    — dirt level %        [0.00, 20.0]
-        x[2] = Fmm     — mismatch factor     [0.95,  1.0]
-        x[3] = Fshade  — shading factor      [0.70,  1.0]
-
-    Fixed (from session_state):
-        Pmax_stc, Ftemp_P, Fg, Fage
-
-    Objective: minimise |Pmax_calc - Pmax_meas|
-    """
-
     BOUNDS = [
         (0.00, 0.35),
         (0.00, 20.0),
@@ -114,7 +88,6 @@ def abc_optimize(Pmax_stc, Ftemp_P, Fg, Fage, Pmax_meas, num_bees, max_cycles, l
     def clip(x):
         return [max(lo, min(hi, x[i])) for i, (lo, hi) in enumerate(BOUNDS)]
 
-    # ---- Initialise ----
     solutions = [random_solution() for _ in range(num_bees)]
     fitness   = [objective(s) for s in solutions]
     trial     = [0] * num_bees
@@ -122,7 +95,6 @@ def abc_optimize(Pmax_stc, Ftemp_P, Fg, Fage, Pmax_meas, num_bees, max_cycles, l
 
     for cycle in range(max_cycles):
 
-        # ---- Employed Bees ----
         for i in range(num_bees):
             k = random.randint(0, num_bees - 1)
             while k == i:
@@ -140,7 +112,6 @@ def abc_optimize(Pmax_stc, Ftemp_P, Fg, Fage, Pmax_meas, num_bees, max_cycles, l
             else:
                 trial[i] += 1
 
-        # ---- Onlooker Bees ----
         prob       = [1 / (1 + f) for f in fitness]
         total_prob = sum(prob)
         prob       = [p / total_prob for p in prob]
@@ -163,7 +134,6 @@ def abc_optimize(Pmax_stc, Ftemp_P, Fg, Fage, Pmax_meas, num_bees, max_cycles, l
                 else:
                     trial[i] += 1
 
-        # ---- Scout Bees ----
         for i in range(num_bees):
             if trial[i] > limit:
                 solutions[i] = random_solution()
@@ -183,115 +153,83 @@ def abc_optimize(Pmax_stc, Ftemp_P, Fg, Fage, Pmax_meas, num_bees, max_cycles, l
 # ------------------ RUN ------------------
 if st.button("🐝 Run ABC Optimization"):
 
+    all_results = []
+
     with st.spinner("Bees are minimizing the error between calculated and measured Pmax..."):
-        best_sol, best_pmax, error_history = abc_optimize(
-            Pmax_stc, Ftemp_P, Fg, Fage,
-            Pmax_meas,
-            int(num_bees), int(max_cycles), int(limit)
-        )
+        for i, Pmax_meas in enumerate(pmax_meas_list):
+            if Pmax_meas <= 0:
+                all_results.append(None)
+                continue
+            best_sol, best_pmax, error_history = abc_optimize(
+                Pmax_stc, Ftemp_P, Fg, Fage,
+                Pmax_meas,
+                int(num_bees), int(max_cycles), int(limit)
+            )
+            all_results.append((best_sol, best_pmax, error_history, Pmax_meas))
 
-    BG_opt, dirt_opt, Fmm_opt, Fshade_opt = best_sol
-    
-    # --- SAVE RESULTS FOR PAGE 3 ---
-    st.session_state["abc_best_pmax"] = best_pmax
-    st.session_state["abc_best_sol"] = best_sol
-    st.session_state["abc_error_history"] = error_history
-    st.session_state["abc_pmax_meas"] = Pmax_meas
-    
-    # Optional (for full table in Page 3)
-    st.session_state["abc_vmp_meas"] = Vmp_meas
-    st.session_state["abc_imp_meas"] = Imp_meas
-    st.session_state["abc_voc_meas"] = Voc_meas
-    st.session_state["abc_isc_meas"] = Isc_meas
-
-    G_front    = Fg * 1000
-    G_total    = G_front * (1 + BG_opt)
-    Fg_eff     = G_total / 1000
-    Fclean_opt = (100 - dirt_opt) / 100
-
-    abs_error = abs(best_pmax - Pmax_meas)
-    pct_error = (abs_error / Pmax_meas) * 100 if Pmax_meas != 0 else 0
-
-    Pmax_calc_original = st.session_state.get("Pmax_calculated", None)
+    # --- SAVE FOR PAGE 3 ---
+    st.session_state["abc_all_results"]  = all_results
+    st.session_state["abc_pmax_meas_list"] = pmax_meas_list
 
     st.markdown("---")
     st.subheader("🏆 Optimization Results")
 
-    # --- Optimal factors ---
+    Pmax_calc_list = st.session_state.get("Pmax_calculated", [None]*5)
+
+    # --- Optimized factors per set ---
     st.markdown("#### Optimized Controllable Factors")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Optimal BG",     f"{BG_opt:.4f}")
-    col2.metric("Optimal Dirt %", f"{dirt_opt:.4f}")
-    col3.metric("Optimal Fmm",    f"{Fmm_opt:.4f}")
-    col4.metric("Optimal Fshade", f"{Fshade_opt:.4f}")
+    header_cols = st.columns(5)
+    for i, col in enumerate(header_cols):
+        col.markdown(f"**Set {i+1}**")
 
-    # --- Pmax comparison ---
+    for label, idx in [("BG", 0), ("Dirt %", 1), ("Fmm", 2), ("Fshade", 3)]:
+        row_cols = st.columns(5)
+        for i, col in enumerate(row_cols):
+            if all_results[i] is not None:
+                val = all_results[i][0][idx]
+                col.write(f"{label}: {val:.4f}")
+            else:
+                col.write(f"{label}: —")
+
+    st.markdown("---")
+
+    # --- Pmax comparison per set ---
     st.markdown("#### Pmax Comparison")
-    col_a, col_b, col_c, col_d = st.columns(4)
-    col_a.metric("Measured Pmax (W)",  f"{Pmax_meas:.4f}")
-    col_b.metric("Optimized Pmax (W)", f"{best_pmax:.4f}")
-    col_c.metric("Absolute Error (W)", f"{abs_error:.4f}")
-    col_d.metric("Error (%)",          f"{pct_error:.4f} %")
+    result_cols = st.columns(5)
+    for i, col in enumerate(result_cols):
+        if all_results[i] is not None:
+            best_sol, best_pmax, error_history, Pmax_meas = all_results[i]
+            abs_error = abs(best_pmax - Pmax_meas)
+            pct_error = (abs_error / Pmax_meas) * 100 if Pmax_meas != 0 else 0
+            col.markdown(f"**Set {i+1}**")
+            col.write(f"Measured: {Pmax_meas:.4f} W")
+            col.write(f"Optimized: {best_pmax:.4f} W")
+            col.write(f"Abs Error: {abs_error:.4f} W")
+            col.write(f"Error: {pct_error:.4f} %")
+        else:
+            col.markdown(f"**Set {i+1}**")
+            col.write("Skipped (Pmax = 0)")
 
-    # --- Before vs after ABC ---
-    if Pmax_calc_original is not None:
-        orig_error     = abs(Pmax_calc_original - Pmax_meas)
-        orig_pct_error = (orig_error / Pmax_meas) * 100 if Pmax_meas != 0 else 0
-        st.markdown("#### Before vs After ABC")
-        col_e, col_f, col_g, col_h = st.columns(4)
-        col_e.metric("Before ABC — Pmax (W)",    f"{Pmax_calc_original:.4f}")
-        col_f.metric("Before ABC — Error (W)",   f"{orig_error:.4f}")
-        col_g.metric("After ABC  — Pmax (W)",    f"{best_pmax:.4f}")
-        col_h.metric("After ABC  — Error (W)",   f"{abs_error:.4f}",
-                     delta=f"{abs_error - orig_error:.4f} W", delta_color="inverse")
+    st.markdown("---")
 
-    # --- Full output table ---
-    st.markdown("#### 📊 Measured vs Calculated — All Five Outputs")
+    # --- Before vs After ABC ---
+    st.markdown("#### Before vs After ABC")
+    bva_cols = st.columns(5)
+    for i, col in enumerate(bva_cols):
+        if all_results[i] is not None and i < len(Pmax_calc_list) and Pmax_calc_list[i] is not None:
+            _, best_pmax, _, Pmax_meas = all_results[i]
+            orig_pmax  = Pmax_calc_list[i]
+            orig_error = abs(orig_pmax - Pmax_meas)
+            new_error  = abs(best_pmax - Pmax_meas)
+            col.markdown(f"**Set {i+1}**")
+            col.write(f"Before: {orig_pmax:.4f} W")
+            col.write(f"Before Error: {orig_error:.4f} W")
+            col.write(f"After: {best_pmax:.4f} W")
+            col.write(f"After Error: {new_error:.4f} W")
+        else:
+            col.markdown(f"**Set {i+1}**")
+            col.write("—")
 
-    rows = [("Pmax (W)", Pmax_meas, best_pmax)]
-
-    if Isc_stc:
-        Isc_calc = Isc_stc * Ftemp_Isc * Fg_eff * Fclean_opt * Fshade_opt
-        rows.append(("Isc (A)", Isc_meas, Isc_calc))
-    if Imp_stc:
-        Imp_calc = Imp_stc * Ftemp_Imp * Fg_eff * Fclean_opt * Fshade_opt
-        rows.append(("Imp (A)", Imp_meas, Imp_calc))
-    if Voc_stc:
-        Voc_calc = Voc_stc * Ftemp_Voc
-        rows.append(("Voc (V)", Voc_meas, Voc_calc))
-    if Vmp_stc:
-        Vmp_calc = Vmp_stc * Ftemp_Vmp
-        rows.append(("Vmp (V)", Vmp_meas, Vmp_calc))
-
-    header = st.columns(4)
-    header[0].markdown("**Parameter**")
-    header[1].markdown("**Measured**")
-    header[2].markdown("**Calculated**")
-    header[3].markdown("**Error (%)**")
-
-    for param, meas, calc in rows:
-        err_p = abs(calc - meas) / meas * 100 if meas != 0 else 0
-        c1, c2, c3, c4 = st.columns(4)
-        c1.write(param)
-        c2.write(f"{meas:.4f}")
-        c3.write(f"{calc:.4f}")
-        c4.write(f"{err_p:.4f} %")
-
-    # --- Steps ---
-    st.markdown("#### 🧮 Optimized Calculation Steps")
-    st.write(f"1️⃣ G_front (from Fg) = {Fg:.4f} × 1000 = **{G_front:.2f} W/m²**")
-    st.write(f"2️⃣ Total irradiance with optimal BG = {G_front:.2f} × (1 + {BG_opt:.4f}) = **{G_total:.2f} W/m²**")
-    st.write(f"3️⃣ Effective Fg = {G_total:.2f} / 1000 = **{Fg_eff:.4f}**")
-    st.write(f"4️⃣ Fclean = (100 − {dirt_opt:.4f}) / 100 = **{Fclean_opt:.4f}**")
-    st.write(
-        f"5️⃣ Pmax = {Pmax_stc:.2f} × {Ftemp_P:.4f} × {Fg_eff:.4f} × "
-        f"{Fclean_opt:.4f} × {Fshade_opt:.4f} × {Fmm_opt:.4f} × {Fage:.4f} "
-        f"= **{best_pmax:.4f} W**"
-    )
-    st.write(
-        f"6️⃣ Absolute error = |{best_pmax:.4f} − {Pmax_meas:.4f}| "
-        f"= **{abs_error:.4f} W ({pct_error:.4f}%)**"
-    )
     st.info(
         "ABC tuned BG, dirt, Fmm, and Fshade to minimise |Pmax_calc − Pmax_measured|. "
         "Voc and Vmp are temperature-only and are not affected by the optimized factors."
