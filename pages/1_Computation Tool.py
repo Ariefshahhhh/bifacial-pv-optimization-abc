@@ -41,7 +41,7 @@ with col2:
     Fshade = st.number_input("Shading Factor (Fshade) [Range: 0.7 – 1.0]", min_value=0.7, max_value=1.0, value=0.95)
 
 # ------------------ CALCULATION ------------------
-if st.button("Calculate Outputs"):
+if st.button("Compute Outputs"):
 
     # Rear & total irradiance
     G_rear = BG * G_front
