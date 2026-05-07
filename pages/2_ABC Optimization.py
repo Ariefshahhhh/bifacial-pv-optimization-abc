@@ -266,7 +266,7 @@ if st.button("🐝 Run ABC Optimization"):
     header = st.columns(4)
     header[0].markdown("**Parameter**")
     header[1].markdown("**Measured**")
-    header[2].markdown("**Calculated**")
+    header[2].markdown("**Computated**")
     header[3].markdown("**Error (%)**")
 
     for param, meas, calc in rows:
