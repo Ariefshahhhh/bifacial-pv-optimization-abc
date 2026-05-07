@@ -239,14 +239,14 @@ if st.button("🐝 Run ABC Optimization"):
         orig_pct_error = (orig_error / Pmax_meas) * 100 if Pmax_meas != 0 else 0
         st.markdown("#### Before vs After ABC")
         col_e, col_f, col_g, col_h = st.columns(4)
-        col_e.metric("Before ABC — Pmax (W)",    f"{Pmax_calc_original:.4f}")
-        col_f.metric("Before ABC — Error (W)",   f"{orig_error:.4f}")
-        col_g.metric("After ABC  — Pmax (W)",    f"{best_pmax:.4f}")
-        col_h.metric("After ABC  — Error (W)",   f"{abs_error:.4f}",
+        col_e.metric("Computated — Pmax (W)",    f"{Pmax_calc_original:.4f}")
+        col_f.metric("Computated — Error (W)",   f"{orig_error:.4f}")
+        col_g.metric("Optimized using ABC  — Pmax (W)",    f"{best_pmax:.4f}")
+        col_h.metric("Optimized using ABC  — Error (W)",   f"{abs_error:.4f}",
                      delta=f"{abs_error - orig_error:.4f} W", delta_color="inverse")
 
     # --- Full output table ---
-    st.markdown("#### 📊 Measured vs Calculated — All Five Outputs")
+    st.markdown("#### 📊 Measured vs Computated — All Five Outputs")
 
     rows = [("Pmax (W)", Pmax_meas, best_pmax)]
 
